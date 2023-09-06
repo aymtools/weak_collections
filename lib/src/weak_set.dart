@@ -82,7 +82,7 @@ class WeakSet<E extends Object> with SetMixin<E> {
 
   int _hashCode(Object? e) => e.hashCode;
 
-  static Set<R> _newEmpty<R extends Object>() => WeakSet<R>();
+  // static Set<R> _newEmpty<R extends Object>() => WeakSet<R>();
 
   final Queue<_WeakSetEntry<E>> _queue = Queue();
   late final Finalizer<_WeakSetEntry<E>> _finalizer =
@@ -215,7 +215,7 @@ class WeakSet<E extends Object> with SetMixin<E> {
   bool _remove(Object? object, int hashCode) {
     final index = hashCode & (_buckets.length - 1);
     var entry = _buckets[index];
-    _WeakSetEntry<E>? previous = null;
+    _WeakSetEntry<E>? previous;
     while (entry != null) {
       if (_equals(entry.key, object)) {
         final next = entry.remove();

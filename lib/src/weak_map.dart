@@ -358,7 +358,7 @@ class WeakMap<K extends Object, V> with MapMixin<K, V> {
           entry = entry.next;
           continue;
         }
-        action(k, entry.value!);
+        action(k, entry.value as V);
         if (stamp != _modificationCount) {
           throw ConcurrentModificationError(this);
         }
@@ -467,7 +467,7 @@ class WeakMap<K extends Object, V> with MapMixin<K, V> {
     var entry = buckets[index];
     while (entry != null) {
       if (hashCode == entry.hashCode && entry.key.target == key) {
-        return entry.value = update(entry.value!);
+        return entry.value = update(entry.value as V);
       }
       entry = entry.next;
     }
@@ -494,7 +494,7 @@ class WeakMap<K extends Object, V> with MapMixin<K, V> {
           entry = entry.next;
           continue;
         }
-        entry.value = update(k, entry.value!);
+        entry.value = update(k, entry.value as V);
         if (stamp != _modificationCount) {
           throw ConcurrentModificationError(this);
         }

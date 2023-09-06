@@ -1,4 +1,3 @@
-import 'package:weak_collections/src/weak_map.dart';
 import 'package:weak_collections/weak_collections.dart';
 
 void main() {
@@ -52,4 +51,5 @@ void main() {
       });
     });
   });
+  lis.length;
 }
