@@ -34,7 +34,7 @@ WeakSet weakSet = WeakSet();
 weakSet.add(o);
 o = null;
 
-// After garbage collection weakMap[o] will be removed.
+// After garbage collection [o] will be removed.
 print(weakSet.length); // print 0  
 ```
 
