@@ -243,6 +243,7 @@ class WeakMap<K extends Object, V> with MapMixin<K, V> {
 
   @override
   bool containsKey(Object? key) {
+    if (key == null) return false;
     final hashCode = key.hashCode;
     final buckets = _buckets;
     final index = hashCode & (buckets.length - 1);
@@ -286,6 +287,7 @@ class WeakMap<K extends Object, V> with MapMixin<K, V> {
 
   @override
   V? operator [](Object? key) {
+    if (key == null) return null;
     _expungeStaleEntries();
     final hashCode = key.hashCode;
     final buckets = _buckets;
@@ -301,8 +303,12 @@ class WeakMap<K extends Object, V> with MapMixin<K, V> {
   }
 
   @override
-  void operator []=(K key, V value) {
+  void operator []=(K key, V? value) {
     _expungeStaleEntries();
+    if (value == null) {
+      _remove(key);
+      return;
+    }
     _put(key, value);
   }
 
@@ -368,6 +374,7 @@ class WeakMap<K extends Object, V> with MapMixin<K, V> {
   }
 
   V? _remove(Object? key) {
+    if (key == null) return null;
     final hashCode = key.hashCode;
     final buckets = _buckets;
     final index = hashCode & (buckets.length - 1);
