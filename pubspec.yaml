@@ -1,6 +1,6 @@
 name: weak_collections
 description: Collection of soft references.
-version: 1.0.1
+version: 1.1.0
 repository: https://github.com/aymtools/weak_collections
 
 environment:

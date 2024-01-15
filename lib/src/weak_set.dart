@@ -86,7 +86,7 @@ class WeakSet<E extends Object> with SetMixin<E> {
 
   final Queue<_WeakSetEntry<E>> _queue = Queue();
   late final Finalizer<_WeakSetEntry<E>> _finalizer =
-  Finalizer((entry) => _queue.add(entry));
+      Finalizer((entry) => _queue.add(entry));
 
   // Iterable.
   @override
@@ -135,6 +135,7 @@ class WeakSet<E extends Object> with SetMixin<E> {
 
   @override
   bool contains(Object? element) {
+    if (element == null) return false;
     int index = _hashCode(element) & (_buckets.length - 1);
     var entry = _buckets[index];
     while (entry != null) {
@@ -146,6 +147,7 @@ class WeakSet<E extends Object> with SetMixin<E> {
 
   @override
   E? lookup(Object? element) {
+    if (element == null) return null;
     int index = _hashCode(element) & (_buckets.length - 1);
     var entry = _buckets[index];
     while (entry != null) {
@@ -226,7 +228,7 @@ class WeakSet<E extends Object> with SetMixin<E> {
         }
         _elementCount--;
         _modificationCount =
-        (_modificationCount + 1) & _MODIFICATION_COUNT_MASK;
+            (_modificationCount + 1) & _MODIFICATION_COUNT_MASK;
         return true;
       }
       previous = entry;
@@ -238,6 +240,8 @@ class WeakSet<E extends Object> with SetMixin<E> {
   @override
   bool remove(Object? value) {
     _expungeStaleEntries();
+    if (value == null) return false;
+
     return _remove(value, _hashCode(value));
   }
 
@@ -245,6 +249,7 @@ class WeakSet<E extends Object> with SetMixin<E> {
   void removeAll(Iterable<Object?> elements) {
     _expungeStaleEntries();
     for (Object? object in elements) {
+      if (object == null) continue;
       _remove(object, _hashCode(object));
     }
   }
@@ -275,7 +280,7 @@ class WeakSet<E extends Object> with SetMixin<E> {
           }
           _elementCount--;
           _modificationCount =
-          (_modificationCount + 1) & _MODIFICATION_COUNT_MASK;
+              (_modificationCount + 1) & _MODIFICATION_COUNT_MASK;
           entry = next;
         } else {
           previous = entry;
