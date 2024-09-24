@@ -1,10 +1,10 @@
-import 'package:weak_collections/weak_collections.dart' as weak;
+import 'package:weak_collections/weak_collections.dart';
 
 void main() {
   Object? o = Object();
   Object o2 = Object();
-  weak.WeakMap weakMap = weak.WeakMap();
-  weak.WeakSet weakSet = weak.WeakSet();
+  WeakHashMap weakMap = WeakHashMap();
+  WeakHashSet weakSet = WeakHashSet();
   weakMap[o] = o2;
   weakSet.add(o);
   o = null;

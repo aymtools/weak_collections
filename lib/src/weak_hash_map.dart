@@ -1,5 +1,5 @@
 import 'dart:collection';
-import 'weak_set.dart';
+import 'weak_hash_set.dart';
 
 const int _MODIFICATION_COUNT_MASK = 0x3fffffff;
 
@@ -30,7 +30,7 @@ class _WeakHashMapEntry<K extends Object, V> {
 
 abstract class _WeakHashMapIterator<K extends Object, V, E>
     implements Iterator<E> {
-  final WeakMap<K, V> _map;
+  final WeakHashMap<K, V> _map;
   final int _stamp;
 
   int _index = 0;
@@ -78,7 +78,7 @@ abstract class _WeakHashMapIterator<K extends Object, V, E>
 
 class _WeakHashMapKeyIterator<K extends Object, V>
     extends _WeakHashMapIterator<K, V, K> {
-  _WeakHashMapKeyIterator(WeakMap<K, V> map) : super(map);
+  _WeakHashMapKeyIterator(WeakHashMap<K, V> map) : super(map);
 
   @override
   K get current => _currKey!;
@@ -86,7 +86,7 @@ class _WeakHashMapKeyIterator<K extends Object, V>
 
 class _WeakHashMapValueIterator<K extends Object, V>
     extends _WeakHashMapIterator<K, V, V> {
-  _WeakHashMapValueIterator(WeakMap<K, V> map) : super(map);
+  _WeakHashMapValueIterator(WeakHashMap<K, V> map) : super(map);
 
   @override
   V get current => _entry!.value!;
@@ -94,7 +94,7 @@ class _WeakHashMapValueIterator<K extends Object, V>
 
 abstract class _WeakHashMapIterable<K extends Object, V, E>
     extends Iterable<E> {
-  final WeakMap<K, V> _map;
+  final WeakHashMap<K, V> _map;
 
   _WeakHashMapIterable(this._map);
 
@@ -110,7 +110,7 @@ abstract class _WeakHashMapIterable<K extends Object, V, E>
 
 class _WeakHashMapKeyIterable<K extends Object, V>
     extends _WeakHashMapIterable<K, V, K> {
-  _WeakHashMapKeyIterable(WeakMap<K, V> map) : super(map);
+  _WeakHashMapKeyIterable(WeakHashMap<K, V> map) : super(map);
 
   @override
   Iterator<K> get iterator => _WeakHashMapKeyIterator<K, V>(_map);
@@ -131,7 +131,7 @@ class _WeakHashMapKeyIterable<K extends Object, V>
 
 class _WeakHashMapValueIterable<K extends Object, V>
     extends _WeakHashMapIterable<K, V, V> {
-  _WeakHashMapValueIterable(WeakMap<K, V> map) : super(map);
+  _WeakHashMapValueIterable(WeakHashMap<K, V> map) : super(map);
 
   @override
   Iterator<V> get iterator => _WeakHashMapValueIterator<K, V>(_map);
@@ -147,7 +147,7 @@ class _WeakHashMapValueIterable<K extends Object, V>
   }
 }
 
-class WeakMap<K extends Object, V> with MapMixin<K, V> {
+class WeakHashMap<K extends Object, V> with MapMixin<K, V> {
   static const int _INITIAL_CAPACITY = 8;
 
   final Queue<_WeakHashMapEntry<K, V>> _queue = Queue();
@@ -511,7 +511,7 @@ class WeakMap<K extends Object, V> with MapMixin<K, V> {
   }
 
   Set<K> _newKeySet() {
-    Set<K> set = WeakSet();
+    Set<K> set = WeakHashSet();
     return set;
   }
 }

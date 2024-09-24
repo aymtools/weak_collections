@@ -2,19 +2,19 @@ import 'dart:collection';
 
 const int _MODIFICATION_COUNT_MASK = 0x3fffffff;
 
-class _WeakSetEntry<E extends Object> {
+class _WeakHashSetEntry<E extends Object> {
   final WeakReference<E> key;
   final int hashCode;
-  _WeakSetEntry<E>? next;
+  _WeakHashSetEntry<E>? next;
 
-  final Finalizer<_WeakSetEntry<E>> finalizer;
+  final Finalizer<_WeakHashSetEntry<E>> finalizer;
 
-  _WeakSetEntry(E key, this.hashCode, this.next, this.finalizer)
+  _WeakHashSetEntry(E key, this.hashCode, this.next, this.finalizer)
       : key = WeakReference(key) {
     finalizer.attach(key, this);
   }
 
-  _WeakSetEntry<E>? remove() {
+  _WeakHashSetEntry<E>? remove() {
     // finalizer.detach(key);
     finalizer.detach(this);
 
@@ -25,10 +25,10 @@ class _WeakSetEntry<E extends Object> {
 }
 
 class _WeakHashSetIterator<E extends Object> implements Iterator<E> {
-  final WeakSet<E> _set;
+  final WeakHashSet<E> _set;
   final int _modificationCount;
   int _index = 0;
-  _WeakSetEntry<E>? _next;
+  _WeakHashSetEntry<E>? _next;
   E? _current;
 
   _WeakHashSetIterator(this._set)
@@ -71,10 +71,10 @@ class _WeakHashSetIterator<E extends Object> implements Iterator<E> {
   E get current => _current as E;
 }
 
-class WeakSet<E extends Object> with SetMixin<E> {
+class WeakHashSet<E extends Object> with SetMixin<E> {
   static const int _INITIAL_CAPACITY = 8;
 
-  var _buckets = List<_WeakSetEntry<E>?>.filled(_INITIAL_CAPACITY, null);
+  var _buckets = List<_WeakHashSetEntry<E>?>.filled(_INITIAL_CAPACITY, null);
   int _elementCount = 0;
   int _modificationCount = 0;
 
@@ -84,8 +84,8 @@ class WeakSet<E extends Object> with SetMixin<E> {
 
   // static Set<R> _newEmpty<R extends Object>() => WeakSet<R>();
 
-  final Queue<_WeakSetEntry<E>> _queue = Queue();
-  late final Finalizer<_WeakSetEntry<E>> _finalizer =
+  final Queue<_WeakHashSetEntry<E>> _queue = Queue();
+  late final Finalizer<_WeakHashSetEntry<E>> _finalizer =
       Finalizer((entry) => _queue.add(entry));
 
   // Iterable.
@@ -109,7 +109,7 @@ class WeakSet<E extends Object> with SetMixin<E> {
 
   void _expungeStaleEntries() {
     if (_queue.isEmpty) return;
-    _WeakSetEntry<E> e;
+    _WeakHashSetEntry<E> e;
     while (_queue.isNotEmpty) {
       e = _queue.removeFirst();
       int index = e.hashCode & (_buckets.length - 1);
@@ -119,7 +119,7 @@ class WeakSet<E extends Object> with SetMixin<E> {
         _buckets[index] = e.next;
         _elementCount--;
       } else {
-        _WeakSetEntry<E>? c;
+        _WeakHashSetEntry<E>? c;
         while ((c = entry?.next) != null) {
           if (_equals(c, e)) {
             entry?.next = e.remove();
@@ -217,7 +217,7 @@ class WeakSet<E extends Object> with SetMixin<E> {
   bool _remove(Object? object, int hashCode) {
     final index = hashCode & (_buckets.length - 1);
     var entry = _buckets[index];
-    _WeakSetEntry<E>? previous;
+    _WeakHashSetEntry<E>? previous;
     while (entry != null) {
       if (_equals(entry.key, object)) {
         final next = entry.remove();
@@ -258,7 +258,7 @@ class WeakSet<E extends Object> with SetMixin<E> {
     int length = _buckets.length;
     for (int index = 0; index < length; index++) {
       var entry = _buckets[index];
-      _WeakSetEntry<E>? previous;
+      _WeakHashSetEntry<E>? previous;
       while (entry != null) {
         int modificationCount = _modificationCount;
         E? target = entry.key.target;
@@ -305,7 +305,7 @@ class WeakSet<E extends Object> with SetMixin<E> {
   @override
   void clear() {
     _queue.clear();
-    _buckets = List<_WeakSetEntry<E>?>.filled(_INITIAL_CAPACITY, null);
+    _buckets = List<_WeakHashSetEntry<E>?>.filled(_INITIAL_CAPACITY, null);
     if (_elementCount > 0) {
       _elementCount = 0;
       _modificationCount = (_modificationCount + 1) & _MODIFICATION_COUNT_MASK;
@@ -314,7 +314,7 @@ class WeakSet<E extends Object> with SetMixin<E> {
 
   void _addEntry(E key, int hashCode, int index) {
     _buckets[index] =
-        _WeakSetEntry<E>(key, hashCode, _buckets[index], _finalizer);
+        _WeakHashSetEntry<E>(key, hashCode, _buckets[index], _finalizer);
     int newElements = _elementCount + 1;
     _elementCount = newElements;
     int length = _buckets.length;
@@ -328,7 +328,7 @@ class WeakSet<E extends Object> with SetMixin<E> {
     final oldLength = _buckets.length;
     final newLength = oldLength << 1;
     final oldBuckets = _buckets;
-    final newBuckets = List<_WeakSetEntry<E>?>.filled(newLength, null);
+    final newBuckets = List<_WeakHashSetEntry<E>?>.filled(newLength, null);
     for (int i = 0; i < oldLength; i++) {
       var entry = oldBuckets[i];
       while (entry != null) {
