@@ -1,3 +1,7 @@
+## 1.2.0+1
+
+- Compatibility mode export of WeakMap WeakSet
+
 ## 1.2.0
 
 - To ensure reasonable naming, WeakMap has been renamed to WeakHashMap, and WeakSet has been renamed
