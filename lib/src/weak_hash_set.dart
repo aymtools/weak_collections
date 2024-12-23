@@ -219,7 +219,7 @@ class WeakHashSet<E extends Object> with SetMixin<E> {
     var entry = _buckets[index];
     _WeakHashSetEntry<E>? previous;
     while (entry != null) {
-      if (_equals(entry.key, object)) {
+      if (_equals(entry.key.target, object)) {
         final next = entry.remove();
         if (previous == null) {
           _buckets[index] = next;
