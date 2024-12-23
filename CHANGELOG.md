@@ -1,3 +1,7 @@
+## 1.2.1
+
+- Fix remove bug of WeakHashSet
+
 ## 1.2.0+1
 
 - Compatibility mode export of WeakMap WeakSet
