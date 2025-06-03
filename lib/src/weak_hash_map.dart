@@ -1,4 +1,5 @@
 import 'dart:collection';
+
 import 'weak_hash_set.dart';
 
 const int _MODIFICATION_COUNT_MASK = 0x3fffffff;
@@ -25,6 +26,11 @@ class _WeakHashMapEntry<K extends Object, V> {
     final result = next;
     next = null;
     return result;
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return super == other;
   }
 }
 

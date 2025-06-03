@@ -22,6 +22,11 @@ class _WeakHashSetEntry<E extends Object> {
     next = null;
     return result;
   }
+
+  @override
+  bool operator ==(Object other) {
+    return super == other;
+  }
 }
 
 class _WeakHashSetIterator<E extends Object> implements Iterator<E> {

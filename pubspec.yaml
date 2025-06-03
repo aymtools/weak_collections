@@ -1,7 +1,14 @@
 name: weak_collections
-description: Collection of soft references. Weak reference effect achieved through WeakReference and Finalizer.
-version: 1.2.1
-repository: https://github.com/aymtools/weak_collections
+description: Collection of weak references. WeakHashMap, WeakHashSet. Weak reference effect achieved through WeakReference and Finalizer.
+version: 1.2.2
+homepage: https://github.com/aymtools/weak_collections
+
+topics:
+  - weak
+  - weakmap
+  - weakset
+  - weakhashmap
+  - weakhashset
 
 environment:
   sdk: '>=2.17.0 <4.0.0'
