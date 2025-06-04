@@ -1,3 +1,7 @@
+## 1.3.0
+
+* Add WeakQueue.
+
 ## 1.2.2
 
 * Add topics to improve searchability.

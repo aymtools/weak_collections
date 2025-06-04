@@ -1,13 +1,16 @@
 import 'dart:collection';
 
+// ignore: constant_identifier_names
 const int _MODIFICATION_COUNT_MASK = 0x3fffffff;
 
 class _WeakHashSetEntry<E extends Object> {
   final WeakReference<E> key;
-  final int hashCode;
   _WeakHashSetEntry<E>? next;
 
   final Finalizer<_WeakHashSetEntry<E>> finalizer;
+
+  @override
+  final int hashCode;
 
   _WeakHashSetEntry(E key, this.hashCode, this.next, this.finalizer)
       : key = WeakReference(key) {
@@ -25,7 +28,7 @@ class _WeakHashSetEntry<E extends Object> {
 
   @override
   bool operator ==(Object other) {
-    return super == other;
+    return identical(this, other);
   }
 }
 
@@ -77,6 +80,7 @@ class _WeakHashSetIterator<E extends Object> implements Iterator<E> {
 }
 
 class WeakHashSet<E extends Object> with SetMixin<E> {
+// ignore: constant_identifier_names
   static const int _INITIAL_CAPACITY = 8;
 
   var _buckets = List<_WeakHashSetEntry<E>?>.filled(_INITIAL_CAPACITY, null);
