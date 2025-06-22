@@ -1,3 +1,4 @@
+import 'package:weak_collections/src/weak_queue.dart';
 import 'package:weak_collections/weak_collections.dart';
 
 void main() {
@@ -5,8 +6,10 @@ void main() {
   Object o2 = Object();
   WeakHashMap weakMap = WeakHashMap();
   WeakHashSet weakSet = WeakHashSet();
+  WeakQueue weakQueue = WeakQueue();
   weakMap[o] = o2;
   weakSet.add(o);
+  weakQueue.add(o);
   o = null;
   List lis = [];
   Future(() => '').then((_) {

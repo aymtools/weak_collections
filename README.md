@@ -4,6 +4,7 @@ This package contains the classes:
 
 * **WeakHashMap**
 * **WeakHashSet**
+* **WeakQueue**
 
 ## WeakHashMap
 
@@ -36,6 +37,21 @@ o = null;
 
 // After garbage collection [o] will be removed.
 print(weakSet.length); // print 0  
+```
+
+## WeakQueue
+
+WeakQueue will automatically release unreferenced objects in the queue.
+which means that the queue object will not be automatically recycled and removed from the queue.
+
+```
+Object? o = Object();
+WeakQueue weakQueue = WeakQueue();
+weakQueue.add(o);
+o = null;
+
+// After garbage collection [o] will be removed.
+print(weakQueue.length); // print 0  
 ```
 
 ## Usage
