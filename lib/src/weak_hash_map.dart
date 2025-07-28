@@ -287,7 +287,7 @@ class WeakHashMap<K extends Object, V> with MapMixin<K, V> {
     final index = hashCode & (length - 1);
     var entry = buckets[index];
     while (entry != null) {
-      if (hashCode == entry.hashCode && entry.key == key) {
+      if (hashCode == entry.hashCode && entry.key.target == key) {
         entry.value = value;
         return;
       }
