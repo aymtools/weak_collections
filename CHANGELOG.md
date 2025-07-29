@@ -1,3 +1,7 @@
+## 1.3.2
+
+*
+
 ## 1.3.1
 
 * Fixed the bug in the put method of WeakHashMap..

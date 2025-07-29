@@ -1,6 +1,6 @@
 name: weak_collections
 description: Collection of weak references. WeakHashMap, WeakHashSet, WeakQueue. Weak reference effect achieved through WeakReference and Finalizer.
-version: 1.3.1
+version: 1.3.2
 homepage: https://github.com/aymtools/weak_collections
 
 topics:
