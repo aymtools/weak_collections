@@ -53,13 +53,13 @@ void main() {
     test('contains() returns false', () {
       expect(set.contains(a), isFalse);
       expect(set.contains(null), isFalse);
-      expect(set.contains('foo'), isFalse);
+      expect(set.contains(TestVal('foo')), isFalse);
     });
 
     test('lookup() returns null', () {
       expect(set.lookup(a), isNull);
       expect(set.lookup(null), isNull);
-      expect(set.lookup('foo'), isNull);
+      expect(set.lookup(TestVal('foo')), isNull);
     });
 
     test('toSet() returns an empty set', () {

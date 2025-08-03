@@ -1,4 +1,3 @@
-import 'package:weak_collections/src/weak_queue.dart';
 import 'package:weak_collections/weak_collections.dart';
 
 void main() {

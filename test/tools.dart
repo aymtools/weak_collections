@@ -10,7 +10,7 @@ class TestVal {
 }
 
 class SubVal extends TestVal {
-  SubVal(String debugName) : super(debugName);
+  SubVal(super.debugName);
 
   @override
   String toString() {
