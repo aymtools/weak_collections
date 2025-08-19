@@ -22,7 +22,7 @@ class _WeakHashMapEntry<K extends Object, V> {
     this.next,
     this.finalizer,
   ) : key = WeakReference(key) {
-    finalizer.attach(key, this);
+    finalizer.attach(key, this, detach: this);
   }
 
   _WeakHashMapEntry<K, V>? remove() {
@@ -162,7 +162,8 @@ class WeakHashMap<K extends Object, V> with MapMixin<K, V> {
   static const int _INITIAL_CAPACITY = 8;
 
   final Queue<_WeakHashMapEntry<K, V>> _queue = Queue();
-  late final Finalizer<_WeakHashMapEntry<K, V>> _finalizer =
+
+  late Finalizer<_WeakHashMapEntry<K, V>> _finalizer =
       Finalizer((entry) => _queue.add(entry..value = null));
 
   int _elementCount = 0;
@@ -427,6 +428,7 @@ class WeakHashMap<K extends Object, V> with MapMixin<K, V> {
   @override
   void clear() {
     _queue.clear();
+    _finalizer = Finalizer((entry) => _queue.add(entry..value = null));
     _buckets = List.filled(_INITIAL_CAPACITY, null);
     if (_elementCount > 0) {
       _elementCount = 0;

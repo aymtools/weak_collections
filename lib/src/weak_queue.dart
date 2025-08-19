@@ -1,16 +1,15 @@
 import 'dart:collection';
 
 class WeakQueue<T extends Object> with Iterable<T> implements Queue<T> {
-  final Queue<_WeakRef<T>> _refs = Queue<_WeakRef<T>>();
-  final Finalizer<_WeakRef<T>> _finalizer = Finalizer((ref) {
-    ref._isCollected = true;
-  });
+  final Queue<_WeakRefEntry<T>> _refs = Queue<_WeakRefEntry<T>>();
+
+  Finalizer<_WeakRefEntry<T>> _finalizer =
+      Finalizer((ref) => ref._isCollected = true);
 
   @override
   void add(T value) {
-    final ref = _WeakRef(value);
+    final ref = _WeakRefEntry(value, _finalizer);
     _refs.add(ref);
-    _finalizer.attach(value, ref, detach: ref);
   }
 
   @override
@@ -22,16 +21,14 @@ class WeakQueue<T extends Object> with Iterable<T> implements Queue<T> {
 
   @override
   void addFirst(T value) {
-    final ref = _WeakRef(value);
+    final ref = _WeakRefEntry(value, _finalizer);
     _refs.addFirst(ref);
-    _finalizer.attach(value, ref, detach: ref);
   }
 
   @override
   void addLast(T value) {
-    final ref = _WeakRef(value);
+    final ref = _WeakRefEntry(value, _finalizer);
     _refs.addLast(ref);
-    _finalizer.attach(value, ref, detach: ref);
   }
 
   @override
@@ -41,7 +38,7 @@ class WeakQueue<T extends Object> with Iterable<T> implements Queue<T> {
       final ref = _refs.removeFirst();
       final target = ref._value.target;
       if (!ref._isCollected && target != null) {
-        _finalizer.detach(ref);
+        ref.remove();
         return target;
       }
     }
@@ -55,7 +52,7 @@ class WeakQueue<T extends Object> with Iterable<T> implements Queue<T> {
       final ref = _refs.removeLast();
       final target = ref._value.target;
       if (!ref._isCollected && target != null) {
-        _finalizer.detach(ref);
+        ref.remove();
         return target;
       }
     }
@@ -82,9 +79,7 @@ class WeakQueue<T extends Object> with Iterable<T> implements Queue<T> {
 
   @override
   void clear() {
-    for (final ref in _refs) {
-      _finalizer.detach(ref);
-    }
+    _finalizer = Finalizer((ref) => ref._isCollected = true);
     _refs.clear();
   }
 
@@ -97,7 +92,7 @@ class WeakQueue<T extends Object> with Iterable<T> implements Queue<T> {
     _expungeStaleEntries();
     for (final ref in _refs) {
       if (!ref._isCollected && ref._value.target == value) {
-        _finalizer.detach(ref);
+        ref.remove();
         _refs.remove(ref);
         return true;
       }
@@ -108,7 +103,7 @@ class WeakQueue<T extends Object> with Iterable<T> implements Queue<T> {
   @override
   void removeWhere(bool Function(T element) test) {
     _expungeStaleEntries();
-    final toRemove = <_WeakRef<T>>[];
+    final toRemove = <_WeakRefEntry<T>>[];
 
     for (final ref in _refs) {
       final target = ref._value.target;
@@ -118,7 +113,7 @@ class WeakQueue<T extends Object> with Iterable<T> implements Queue<T> {
     }
 
     for (final ref in toRemove) {
-      _finalizer.detach(ref);
+      ref.remove();
       _refs.remove(ref);
     }
   }
@@ -126,7 +121,7 @@ class WeakQueue<T extends Object> with Iterable<T> implements Queue<T> {
   @override
   void retainWhere(bool Function(T element) test) {
     _expungeStaleEntries();
-    final toRemove = <_WeakRef<T>>[];
+    final toRemove = <_WeakRefEntry<T>>[];
     for (final ref in _refs) {
       final target = ref._value.target;
       if (!ref._isCollected && target != null && !test(target)) {
@@ -135,7 +130,7 @@ class WeakQueue<T extends Object> with Iterable<T> implements Queue<T> {
     }
 
     for (final ref in toRemove) {
-      _finalizer.detach(ref);
+      ref.remove();
       _refs.remove(ref);
     }
   }
@@ -144,18 +139,26 @@ class WeakQueue<T extends Object> with Iterable<T> implements Queue<T> {
   Queue<R> cast<R>() => _WeakQueueCastView<T, R>(this);
 }
 
-class _WeakRef<T extends Object> {
+class _WeakRefEntry<T extends Object> {
   final WeakReference<T> _value;
+  final Finalizer<_WeakRefEntry<T>> finalizer;
   bool _isCollected = false;
 
-  _WeakRef(T value) : _value = WeakReference(value);
+  _WeakRefEntry(T value, this.finalizer) : _value = WeakReference(value) {
+    finalizer.attach(value, this, detach: this);
+  }
+
+  void remove() {
+    finalizer.detach(this);
+  }
 }
 
 class _WeakQueueIterator<T extends Object> extends Iterator<T> {
-  final Iterator<_WeakRef<T>> _refIterator;
+  final Iterator<_WeakRefEntry<T>> _refIterator;
   T? _current;
 
-  _WeakQueueIterator(Iterable<_WeakRef<T>> refs) : _refIterator = refs.iterator;
+  _WeakQueueIterator(Iterable<_WeakRefEntry<T>> refs)
+      : _refIterator = refs.iterator;
 
   @override
   T get current => _current as T;

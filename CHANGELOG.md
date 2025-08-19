@@ -1,6 +1,6 @@
 ## 1.3.2
 
-*
+* Optimize the creation of Finalizer during clear.
 
 ## 1.3.1
 

@@ -14,11 +14,10 @@ class _WeakHashSetEntry<E extends Object> {
 
   _WeakHashSetEntry(E key, this.hashCode, this.next, this.finalizer)
       : key = WeakReference(key) {
-    finalizer.attach(key, this);
+    finalizer.attach(key, this, detach: this);
   }
 
   _WeakHashSetEntry<E>? remove() {
-    // finalizer.detach(key);
     finalizer.detach(this);
 
     final result = next;
@@ -94,7 +93,7 @@ class WeakHashSet<E extends Object> with SetMixin<E> {
   // static Set<R> _newEmpty<R extends Object>() => WeakSet<R>();
 
   final Queue<_WeakHashSetEntry<E>> _queue = Queue();
-  late final Finalizer<_WeakHashSetEntry<E>> _finalizer =
+  late Finalizer<_WeakHashSetEntry<E>> _finalizer =
       Finalizer((entry) => _queue.add(entry));
 
   // Iterable.
@@ -314,6 +313,7 @@ class WeakHashSet<E extends Object> with SetMixin<E> {
   @override
   void clear() {
     _queue.clear();
+    _finalizer = Finalizer((entry) => _queue.add(entry));
     _buckets = List<_WeakHashSetEntry<E>?>.filled(_INITIAL_CAPACITY, null);
     if (_elementCount > 0) {
       _elementCount = 0;
