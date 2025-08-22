@@ -10,10 +10,12 @@ class _WeakHashMapEntry<K extends Object, V> {
   V? value;
 
   _WeakHashMapEntry<K, V>? next;
-  final Finalizer<_WeakHashMapEntry<K, V>> finalizer;
+  final Finalizer<WeakReference<_WeakHashMapEntry<K, V>>> finalizer;
 
   @override
   final int hashCode;
+
+  late final WeakReference<_WeakHashMapEntry<K, V>> _detachKey;
 
   _WeakHashMapEntry(
     K key,
@@ -22,11 +24,12 @@ class _WeakHashMapEntry<K extends Object, V> {
     this.next,
     this.finalizer,
   ) : key = WeakReference(key) {
-    finalizer.attach(key, this, detach: this);
+    _detachKey = WeakReference(this);
+    finalizer.attach(key, _detachKey, detach: _detachKey);
   }
 
   _WeakHashMapEntry<K, V>? remove() {
-    finalizer.detach(this);
+    finalizer.detach(_detachKey);
     final result = next;
     next = null;
     return result;
@@ -161,14 +164,22 @@ class WeakHashMap<K extends Object, V> with MapMixin<K, V> {
   // ignore: constant_identifier_names
   static const int _INITIAL_CAPACITY = 8;
 
-  final Queue<_WeakHashMapEntry<K, V>> _queue = Queue();
+  final Queue<WeakReference<_WeakHashMapEntry<K, V>>> _queue = Queue();
 
-  late Finalizer<_WeakHashMapEntry<K, V>> _finalizer =
-      Finalizer((entry) => _queue.add(entry..value = null));
+  late Finalizer<WeakReference<_WeakHashMapEntry<K, V>>> _finalizer =
+      _createFinalizer();
 
   int _elementCount = 0;
   var _buckets = List<_WeakHashMapEntry<K, V>?>.filled(_INITIAL_CAPACITY, null);
   int _modificationCount = 0;
+
+  Finalizer<WeakReference<_WeakHashMapEntry<K, V>>> _createFinalizer() =>
+      Finalizer((entry) {
+        if (entry.target != null) {
+          entry.target?.value = null;
+          _queue.add(entry);
+        }
+      });
 
   @override
   int get length {
@@ -204,7 +215,10 @@ class WeakHashMap<K extends Object, V> with MapMixin<K, V> {
     if (_queue.isEmpty) return;
     _WeakHashMapEntry<K, V> e;
     while (_queue.isNotEmpty) {
-      e = _queue.removeFirst();
+      final entity = _queue.removeFirst().target;
+      if (entity == null) continue;
+      e = entity;
+
       int index = e.hashCode & (_buckets.length - 1);
       var entry = _buckets[index];
       if (entry == null) continue;
@@ -428,7 +442,7 @@ class WeakHashMap<K extends Object, V> with MapMixin<K, V> {
   @override
   void clear() {
     _queue.clear();
-    _finalizer = Finalizer((entry) => _queue.add(entry..value = null));
+    _finalizer = _createFinalizer();
     _buckets = List.filled(_INITIAL_CAPACITY, null);
     if (_elementCount > 0) {
       _elementCount = 0;

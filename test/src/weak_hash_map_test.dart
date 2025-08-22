@@ -60,4 +60,106 @@ void main() {
       expect(map.containsValue(v3.debugName), false);
     });
   });
+
+  group('WeakHashMap basic operations', () {
+    test('insert and retrieve values', () {
+      final map = WeakHashMap<TestVal, int>();
+      final a = TestVal('a');
+      final b = TestVal('b');
+
+      map[a] = 1;
+      map[b] = 2;
+
+      expect(map[a], 1);
+      expect(map[b], 2);
+      expect(map.containsKey(a), isTrue);
+      expect(map.containsValue(2), isTrue);
+      expect(map.length, 2);
+    });
+
+    test('update existing value', () {
+      final map = WeakHashMap<TestVal, int>();
+      final a = TestVal('a');
+      map[a] = 10;
+
+      final newValue = map.update(a, (v) => v + 5);
+      expect(newValue, 15);
+      expect(map[a], 15);
+    });
+
+    test('putIfAbsent should not overwrite', () {
+      final map = WeakHashMap<TestVal, int>();
+      final a = TestVal('a');
+      map[a] = 1;
+
+      final result = map.putIfAbsent(a, () => 99);
+      expect(result, 1);
+      expect(map[a], 1);
+    });
+
+    test('remove key', () {
+      final map = WeakHashMap<TestVal, int>();
+      final a = TestVal('a');
+      map[a] = 123;
+
+      final removed = map.remove(a);
+      expect(removed, 123);
+      expect(map.containsKey(a), isFalse);
+    });
+
+    test('removeWhere', () {
+      final map = WeakHashMap<TestVal, int>();
+      final a = TestVal('a');
+      final b = TestVal('b');
+      final c = TestVal('c');
+      map[a] = 1;
+      map[b] = 2;
+      map[c] = 3;
+
+      map.removeWhere((k, v) => v.isOdd);
+      expect(map.length, 1);
+      expect(map.containsValue(2), isTrue);
+    });
+  });
+
+  group('WeakHashMap iteration', () {
+    test('keys, values, entries', () {
+      final map = WeakHashMap<TestVal, int>();
+      final a = TestVal('a');
+      final b = TestVal('b');
+      map[a] = 10;
+      map[b] = 20;
+
+      expect(map.keys.toSet(), {a, b});
+      expect(map.values.toSet(), {10, 20});
+      expect(map.entries.length, 2);
+    });
+
+    test('updateAll', () {
+      final map = WeakHashMap<TestVal, int>();
+      final a = TestVal('a');
+      final b = TestVal('b');
+      final c = TestVal('c');
+      map[a] = 1;
+      map[b] = 2;
+      map[c] = 3;
+
+      map.updateAll((k, v) => v * 2);
+      expect(map[a], 2);
+      expect(map[b], 4);
+    });
+
+    test('map transform', () {
+      final map = WeakHashMap<TestVal, int>();
+      final a = TestVal('a');
+      final b = TestVal('b');
+      final c = TestVal('c');
+      map[a] = 10;
+      map[b] = 20;
+      map[c] = 30;
+
+      final mapped = map.map((k, v) => MapEntry(k, v.toString()));
+      expect(mapped, {a: '10', b: '20', c: '30'});
+    });
+  });
 }

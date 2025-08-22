@@ -7,18 +7,21 @@ class _WeakHashSetEntry<E extends Object> {
   final WeakReference<E> key;
   _WeakHashSetEntry<E>? next;
 
-  final Finalizer<_WeakHashSetEntry<E>> finalizer;
+  final Finalizer<WeakReference<_WeakHashSetEntry<E>>> finalizer;
 
   @override
   final int hashCode;
 
+  late final WeakReference<_WeakHashSetEntry<E>> _detachKey;
+
   _WeakHashSetEntry(E key, this.hashCode, this.next, this.finalizer)
       : key = WeakReference(key) {
-    finalizer.attach(key, this, detach: this);
+    _detachKey = WeakReference(this);
+    finalizer.attach(key, _detachKey, detach: _detachKey);
   }
 
   _WeakHashSetEntry<E>? remove() {
-    finalizer.detach(this);
+    finalizer.detach(_detachKey);
 
     final result = next;
     next = null;
@@ -92,9 +95,16 @@ class WeakHashSet<E extends Object> with SetMixin<E> {
 
   // static Set<R> _newEmpty<R extends Object>() => WeakSet<R>();
 
-  final Queue<_WeakHashSetEntry<E>> _queue = Queue();
-  late Finalizer<_WeakHashSetEntry<E>> _finalizer =
-      Finalizer((entry) => _queue.add(entry));
+  final Queue<WeakReference<_WeakHashSetEntry<E>>> _queue = Queue();
+  late Finalizer<WeakReference<_WeakHashSetEntry<E>>> _finalizer =
+      _createFinalizer();
+
+  Finalizer<WeakReference<_WeakHashSetEntry<E>>> _createFinalizer() =>
+      Finalizer((entry) {
+        if (entry.target != null) {
+          _queue.add(entry);
+        }
+      });
 
   // Iterable.
   @override
@@ -119,7 +129,9 @@ class WeakHashSet<E extends Object> with SetMixin<E> {
     if (_queue.isEmpty) return;
     _WeakHashSetEntry<E> e;
     while (_queue.isNotEmpty) {
-      e = _queue.removeFirst();
+      final entity = _queue.removeFirst().target;
+      if (entity == null) continue;
+      e = entity;
       int index = e.hashCode & (_buckets.length - 1);
       var entry = _buckets[index];
       if (entry == null) continue;
@@ -313,7 +325,7 @@ class WeakHashSet<E extends Object> with SetMixin<E> {
   @override
   void clear() {
     _queue.clear();
-    _finalizer = Finalizer((entry) => _queue.add(entry));
+    _finalizer = _createFinalizer();
     _buckets = List<_WeakHashSetEntry<E>?>.filled(_INITIAL_CAPACITY, null);
     if (_elementCount > 0) {
       _elementCount = 0;

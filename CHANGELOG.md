@@ -1,3 +1,7 @@
+## 1.3.3
+
+* Use WeakReference for HashEntity management
+
 ## 1.3.2
 
 * Optimize the creation of Finalizer during clear.
