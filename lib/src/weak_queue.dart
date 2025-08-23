@@ -3,10 +3,7 @@ import 'dart:collection';
 class WeakQueue<T extends Object> with Iterable<T> implements Queue<T> {
   final Queue<_WeakRefEntry<T>> _refs = Queue<_WeakRefEntry<T>>();
 
-  late Finalizer<WeakReference<_WeakRefEntry<T>>> _finalizer =
-      _createFinalizer();
-
-  Finalizer<WeakReference<_WeakRefEntry<T>>> _createFinalizer() =>
+  late final Finalizer<WeakReference<_WeakRefEntry<T>>> _finalizer =
       Finalizer((ref) => ref.target?._isCollected = true);
 
   @override
@@ -82,7 +79,6 @@ class WeakQueue<T extends Object> with Iterable<T> implements Queue<T> {
 
   @override
   void clear() {
-    _finalizer = _createFinalizer();
     _refs.clear();
   }
 
@@ -146,15 +142,13 @@ class _WeakRefEntry<T extends Object> {
   final WeakReference<T> _value;
   final Finalizer<WeakReference<_WeakRefEntry<T>>> finalizer;
   bool _isCollected = false;
-  late final WeakReference<_WeakRefEntry<T>> _detachKey;
 
   _WeakRefEntry(T value, this.finalizer) : _value = WeakReference(value) {
-    _detachKey = WeakReference(this);
-    finalizer.attach(value, _detachKey, detach: _detachKey);
+    finalizer.attach(value, WeakReference(this), detach: _value);
   }
 
   void remove() {
-    finalizer.detach(_detachKey);
+    finalizer.detach(_value);
   }
 }
 

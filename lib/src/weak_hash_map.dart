@@ -6,7 +6,7 @@ import 'weak_hash_set.dart';
 const int _MODIFICATION_COUNT_MASK = 0x3fffffff;
 
 class _WeakHashMapEntry<K extends Object, V> {
-  final WeakReference<K> key;
+  final WeakReference<K> keyWeakRef;
   V? value;
 
   _WeakHashMapEntry<K, V>? next;
@@ -15,21 +15,18 @@ class _WeakHashMapEntry<K extends Object, V> {
   @override
   final int hashCode;
 
-  late final WeakReference<_WeakHashMapEntry<K, V>> _detachKey;
-
   _WeakHashMapEntry(
     K key,
     this.value,
     this.hashCode,
     this.next,
     this.finalizer,
-  ) : key = WeakReference(key) {
-    _detachKey = WeakReference(this);
-    finalizer.attach(key, _detachKey, detach: _detachKey);
+  ) : keyWeakRef = WeakReference(key) {
+    finalizer.attach(key, WeakReference(this), detach: keyWeakRef);
   }
 
   _WeakHashMapEntry<K, V>? remove() {
-    finalizer.detach(_detachKey);
+    finalizer.detach(keyWeakRef);
     final result = next;
     next = null;
     return result;
@@ -60,7 +57,7 @@ abstract class _WeakHashMapIterator<K extends Object, V, E>
     }
     var entry = _entry?.next;
     while (entry != null) {
-      K? key = entry.key.target;
+      K? key = entry.keyWeakRef.target;
       if (key != null) {
         _currKey = key; // 引用一下阻止回收
         _entry = entry;
@@ -75,7 +72,7 @@ abstract class _WeakHashMapIterator<K extends Object, V, E>
       entry = buckets[i];
       _index = i + 1;
       while (entry != null) {
-        K? key = entry.key.target;
+        K? key = entry.keyWeakRef.target;
         if (key != null) {
           _currKey = key; // 引用一下阻止回收
           _entry = entry;
@@ -166,20 +163,17 @@ class WeakHashMap<K extends Object, V> with MapMixin<K, V> {
 
   final Queue<WeakReference<_WeakHashMapEntry<K, V>>> _queue = Queue();
 
-  late Finalizer<WeakReference<_WeakHashMapEntry<K, V>>> _finalizer =
-      _createFinalizer();
+  late final Finalizer<WeakReference<_WeakHashMapEntry<K, V>>> _finalizer =
+      Finalizer((entry) {
+    if (entry.target != null) {
+      entry.target?.value = null;
+      _queue.add(entry);
+    }
+  });
 
   int _elementCount = 0;
   var _buckets = List<_WeakHashMapEntry<K, V>?>.filled(_INITIAL_CAPACITY, null);
   int _modificationCount = 0;
-
-  Finalizer<WeakReference<_WeakHashMapEntry<K, V>>> _createFinalizer() =>
-      Finalizer((entry) {
-        if (entry.target != null) {
-          entry.target?.value = null;
-          _queue.add(entry);
-        }
-      });
 
   @override
   int get length {
@@ -275,7 +269,8 @@ class WeakHashMap<K extends Object, V> with MapMixin<K, V> {
     final index = hashCode & (buckets.length - 1);
     var entry = buckets[index];
     while (entry != null) {
-      if (hashCode == entry.hashCode && entry.key.target == key) return true;
+      if (hashCode == entry.hashCode && entry.keyWeakRef.target == key)
+        return true;
       entry = entry.next;
     }
     return false;
@@ -288,7 +283,8 @@ class WeakHashMap<K extends Object, V> with MapMixin<K, V> {
     for (int i = 0; i < length; i++) {
       var entry = buckets[i];
       while (entry != null) {
-        if (entry.key.target != null && entry.value == value) return true;
+        if (entry.keyWeakRef.target != null && entry.value == value)
+          return true;
         entry = entry.next;
       }
     }
@@ -302,7 +298,7 @@ class WeakHashMap<K extends Object, V> with MapMixin<K, V> {
     final index = hashCode & (length - 1);
     var entry = buckets[index];
     while (entry != null) {
-      if (hashCode == entry.hashCode && entry.key.target == key) {
+      if (hashCode == entry.hashCode && entry.keyWeakRef.target == key) {
         entry.value = value;
         return;
       }
@@ -320,7 +316,7 @@ class WeakHashMap<K extends Object, V> with MapMixin<K, V> {
     final index = hashCode & (buckets.length - 1);
     var entry = buckets[index];
     while (entry != null) {
-      if (hashCode == entry.hashCode && entry.key.target == key) {
+      if (hashCode == entry.hashCode && entry.keyWeakRef.target == key) {
         return entry.value;
       }
       entry = entry.next;
@@ -347,7 +343,7 @@ class WeakHashMap<K extends Object, V> with MapMixin<K, V> {
     final index = hashCode & (length - 1);
     var entry = buckets[index];
     while (entry != null) {
-      if (hashCode == entry.hashCode && entry.key.target == key) {
+      if (hashCode == entry.hashCode && entry.keyWeakRef.target == key) {
         return entry.value!;
       }
       entry = entry.next;
@@ -385,7 +381,7 @@ class WeakHashMap<K extends Object, V> with MapMixin<K, V> {
     for (int i = 0; i < length; i++) {
       var entry = buckets[i];
       while (entry != null) {
-        K? k = entry.key.target;
+        K? k = entry.keyWeakRef.target;
         if (k == null) {
           entry = entry.next;
           continue;
@@ -408,7 +404,7 @@ class WeakHashMap<K extends Object, V> with MapMixin<K, V> {
     _WeakHashMapEntry<K, V>? previous;
     while (entry != null) {
       final next = entry.next;
-      if (hashCode == entry.hashCode && entry.key.target == key) {
+      if (hashCode == entry.hashCode && entry.keyWeakRef.target == key) {
         _removeEntry(entry, previous, index);
         _elementCount--;
         _modificationCount =
@@ -442,7 +438,6 @@ class WeakHashMap<K extends Object, V> with MapMixin<K, V> {
   @override
   void clear() {
     _queue.clear();
-    _finalizer = _createFinalizer();
     _buckets = List.filled(_INITIAL_CAPACITY, null);
     if (_elementCount > 0) {
       _elementCount = 0;
@@ -500,7 +495,7 @@ class WeakHashMap<K extends Object, V> with MapMixin<K, V> {
     final index = hashCode & (length - 1);
     var entry = buckets[index];
     while (entry != null) {
-      if (hashCode == entry.hashCode && entry.key.target == key) {
+      if (hashCode == entry.hashCode && entry.keyWeakRef.target == key) {
         return entry.value = update(entry.value as V);
       }
       entry = entry.next;
@@ -523,7 +518,7 @@ class WeakHashMap<K extends Object, V> with MapMixin<K, V> {
     for (int i = 0; i < length; i++) {
       var entry = buckets[i];
       while (entry != null) {
-        K? k = entry.key.target;
+        K? k = entry.keyWeakRef.target;
         if (k == null) {
           entry = entry.next;
           continue;

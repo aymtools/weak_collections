@@ -4,7 +4,7 @@ import 'dart:collection';
 const int _MODIFICATION_COUNT_MASK = 0x3fffffff;
 
 class _WeakHashSetEntry<E extends Object> {
-  final WeakReference<E> key;
+  final WeakReference<E> keyWeakRef;
   _WeakHashSetEntry<E>? next;
 
   final Finalizer<WeakReference<_WeakHashSetEntry<E>>> finalizer;
@@ -12,16 +12,13 @@ class _WeakHashSetEntry<E extends Object> {
   @override
   final int hashCode;
 
-  late final WeakReference<_WeakHashSetEntry<E>> _detachKey;
-
   _WeakHashSetEntry(E key, this.hashCode, this.next, this.finalizer)
-      : key = WeakReference(key) {
-    _detachKey = WeakReference(this);
-    finalizer.attach(key, _detachKey, detach: _detachKey);
+      : keyWeakRef = WeakReference(key) {
+    finalizer.attach(key, WeakReference(this), detach: keyWeakRef);
   }
 
   _WeakHashSetEntry<E>? remove() {
-    finalizer.detach(_detachKey);
+    finalizer.detach(keyWeakRef);
 
     final result = next;
     next = null;
@@ -51,7 +48,7 @@ class _WeakHashSetIterator<E extends Object> implements Iterator<E> {
     }
     var localNext = _next;
     while (localNext != null) {
-      var key = localNext.key.target;
+      var key = localNext.keyWeakRef.target;
       if (key != null) {
         _current = key;
         _next = localNext.next;
@@ -64,7 +61,7 @@ class _WeakHashSetIterator<E extends Object> implements Iterator<E> {
       localNext = buckets[_index];
       _index = _index + 1;
       while (localNext != null) {
-        var key = localNext.key.target;
+        var key = localNext.keyWeakRef.target;
         if (key != null) {
           _current = key;
           _next = localNext.next;
@@ -96,15 +93,12 @@ class WeakHashSet<E extends Object> with SetMixin<E> {
   // static Set<R> _newEmpty<R extends Object>() => WeakSet<R>();
 
   final Queue<WeakReference<_WeakHashSetEntry<E>>> _queue = Queue();
-  late Finalizer<WeakReference<_WeakHashSetEntry<E>>> _finalizer =
-      _createFinalizer();
-
-  Finalizer<WeakReference<_WeakHashSetEntry<E>>> _createFinalizer() =>
+  late final Finalizer<WeakReference<_WeakHashSetEntry<E>>> _finalizer =
       Finalizer((entry) {
-        if (entry.target != null) {
-          _queue.add(entry);
-        }
-      });
+    if (entry.target != null) {
+      _queue.add(entry);
+    }
+  });
 
   // Iterable.
   @override
@@ -159,7 +153,7 @@ class WeakHashSet<E extends Object> with SetMixin<E> {
     int index = _hashCode(element) & (_buckets.length - 1);
     var entry = _buckets[index];
     while (entry != null) {
-      if (_equals(entry.key.target, element)) return true;
+      if (_equals(entry.keyWeakRef.target, element)) return true;
       entry = entry.next;
     }
     return false;
@@ -171,7 +165,7 @@ class WeakHashSet<E extends Object> with SetMixin<E> {
     int index = _hashCode(element) & (_buckets.length - 1);
     var entry = _buckets[index];
     while (entry != null) {
-      var key = entry.key.target;
+      var key = entry.keyWeakRef.target;
       if (_equals(key, element)) return key;
       entry = entry.next;
     }
@@ -183,7 +177,7 @@ class WeakHashSet<E extends Object> with SetMixin<E> {
     for (int i = 0; i < _buckets.length; i++) {
       var entry = _buckets[i];
       while (entry != null) {
-        var key = entry.key.target;
+        var key = entry.keyWeakRef.target;
         if (key != null) return key;
         entry = entry.next;
       }
@@ -197,8 +191,8 @@ class WeakHashSet<E extends Object> with SetMixin<E> {
     for (int i = _buckets.length - 1; i >= 0; i--) {
       var entry = _buckets[i];
       while (entry != null) {
-        if (entry.key.target != null) {
-          e = entry.key.target;
+        if (entry.keyWeakRef.target != null) {
+          e = entry.keyWeakRef.target;
         }
         entry = entry.next;
       }
@@ -213,7 +207,7 @@ class WeakHashSet<E extends Object> with SetMixin<E> {
     final index = hashCode & (_buckets.length - 1);
     var entry = _buckets[index];
     while (entry != null) {
-      if (_equals(entry.key.target, value)) return false;
+      if (_equals(entry.keyWeakRef.target, value)) return false;
       entry = entry.next;
     }
     _addEntry(value, hashCode, index);
@@ -239,7 +233,7 @@ class WeakHashSet<E extends Object> with SetMixin<E> {
     var entry = _buckets[index];
     _WeakHashSetEntry<E>? previous;
     while (entry != null) {
-      if (_equals(entry.key.target, object)) {
+      if (_equals(entry.keyWeakRef.target, object)) {
         final next = entry.remove();
         if (previous == null) {
           _buckets[index] = next;
@@ -281,7 +275,7 @@ class WeakHashSet<E extends Object> with SetMixin<E> {
       _WeakHashSetEntry<E>? previous;
       while (entry != null) {
         int modificationCount = _modificationCount;
-        E? target = entry.key.target;
+        E? target = entry.keyWeakRef.target;
         if (target == null) {
           previous = entry;
           entry = entry.next;
@@ -325,7 +319,6 @@ class WeakHashSet<E extends Object> with SetMixin<E> {
   @override
   void clear() {
     _queue.clear();
-    _finalizer = _createFinalizer();
     _buckets = List<_WeakHashSetEntry<E>?>.filled(_INITIAL_CAPACITY, null);
     if (_elementCount > 0) {
       _elementCount = 0;
@@ -371,7 +364,7 @@ class WeakHashSet<E extends Object> with SetMixin<E> {
     for (int i = 0; i < _buckets.length; i++) {
       var entry = _buckets[i];
       while (entry != null) {
-        var temp = entry.key.target;
+        var temp = entry.keyWeakRef.target;
         if (temp != null) {
           result.add(temp);
         }
