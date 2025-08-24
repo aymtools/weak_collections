@@ -1,19 +1,8 @@
 import 'package:test/test.dart';
-// 假设 WeakReferenceQueue, _WeakEntry, _FinalizationToken, _finalize 定义在下面的路径
-// 根据你的实际项目结构调整路径
 import 'package:weak_collections/src/tools.dart';
 
-import '../vm_tools.dart'; // 假设你的代码在 lib/src/tools.dart
-
-// Helper class for testing
-class TestObject {
-  final String id;
-
-  TestObject(this.id);
-
-  @override
-  String toString() => 'TestObject(id: $id)';
-}
+import '../tools.dart';
+import '../vm_tools.dart';
 
 class FinalizationToken {
   final String data;
@@ -35,15 +24,13 @@ class FinalizationToken {
 }
 
 void main() {
-  late List<Future> futures;
   late List objects;
   setUp(() {
-    futures = [];
     objects = [];
   });
 
   tearDown(() async {
-    await Future.wait(futures);
+    await tearDownWaitAllGC();
   });
 
   group('WeakReferenceQueue', () {
@@ -73,7 +60,7 @@ void main() {
       objects.add(queue);
       queue.attach(weakRef1, token1);
 
-      futures.gc(() {
+      afterGC(() {
         expect(queue.isNotEmpty, isTrue);
         queue.clear();
         expect(queue.isEmpty, isTrue);
@@ -214,7 +201,7 @@ void main() {
       // objects.add(token1);
       // objects.add(token2);
 
-      futures.add(waiteGC(obj1).then((_) {
+      afterGC(() {
         expect(cb1Called, isTrue,
             reason: "Original callback for token1 not called after GC sim");
         expect(receivedToken1ByCb, token1);
@@ -244,7 +231,7 @@ void main() {
         // Keep refs alive until after GC trigger for safety in test if not reassigning to null
         // print(refKeeper1.id);
         // print(refKeeper2.id);
-      }));
+      });
 
       obj1 = null;
       obj2 = null;
@@ -261,17 +248,15 @@ void main() {
         receivedToken1ByCb = t;
       });
 
-      futures.add(
-        waiteGC(obj1).then((_) {
-          expect(cb1Called, false);
-          expect(receivedToken1ByCb, null);
+      afterGC(() {
+        expect(cb1Called, false);
+        expect(receivedToken1ByCb, null);
 
-          expect(queue, isEmpty);
-          queue.expungeStale(visitCallback);
+        expect(queue, isEmpty);
+        queue.expungeStale(visitCallback);
 
-          expect(finalizedTokens, isEmpty);
-        }),
-      );
+        expect(finalizedTokens, isEmpty);
+      });
       obj1 = null;
       token1 = null;
     });
@@ -288,7 +273,7 @@ void main() {
 
       objects.add(tokenToClear);
 
-      futures.add(waiteGC(objToClear).then((_) {
+      afterGC(() {
         expect(cbClearCalled, isTrue,
             reason: "Original callback for tokenToClear not called");
         expect(queue.isNotEmpty, isTrue,
@@ -305,8 +290,57 @@ void main() {
             reason:
                 "No tokens should be processed by expungeStale after clear");
         expect(queue.isEmpty, isTrue);
-      }));
+      });
       objToClear = null;
+    });
+
+    test('detach makes the queue empty', () async {
+      TestObject? obj1 = TestObject('obj1');
+      var token1 = FinalizationToken('token1');
+      var weakRef1 = WeakReference(obj1);
+      bool cb1Called = false;
+      FinalizationToken? receivedToken1ByCb;
+
+      queue.attach(weakRef1, token1, finalizationCallback: (t) {
+        cb1Called = true;
+        receivedToken1ByCb = t;
+      });
+
+      queue.detach(weakRef1);
+
+      expect(queue.isEmpty, isTrue);
+      objects.add(token1);
+
+      afterGC(() {
+        expect(cb1Called, false);
+        expect(receivedToken1ByCb, isNull);
+        expect(queue.isEmpty, isTrue);
+      });
+
+      obj1 = null;
+    });
+
+    test('attach multiple times will only retain the effect once', () async {
+      TestObject? obj1 = TestObject('obj1');
+      var token1 = FinalizationToken('token1');
+      var weakRef1 = WeakReference(obj1);
+      int calledTimes = 0;
+
+      queue.attach(weakRef1, token1, finalizationCallback: (t) {
+        calledTimes++;
+      });
+
+      queue.attach(weakRef1, token1, finalizationCallback: (t) {
+        calledTimes++;
+      });
+
+      objects.add(token1);
+      afterGC(() {
+        expect(calledTimes, 1);
+        expect(queue.isNotEmpty, isTrue);
+      });
+
+      obj1 = null;
     });
   });
 }

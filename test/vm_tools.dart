@@ -54,14 +54,14 @@ class VmServiceTool {
   }
 }
 
-Future<void> waiteVMGC() async {
+Future<void> _waitVMGC() async {
   await VmServiceTool.instance.gc();
   return;
 }
 
-Future<void> waiteGC(Object check) async {
+Future<void> _waitGC(Object check) async {
   if (await VmServiceTool.instance.canUseVMGc) {
-    return Future.delayed(Duration(milliseconds: 100)).then((_) => waiteVMGC());
+    return Future.delayed(Duration(milliseconds: 100)).then((_) => _waitVMGC());
   }
   Completer<void> finalizerCompleter = Completer();
   void call() async {
@@ -75,16 +75,25 @@ Future<void> waiteGC(Object check) async {
   return finalizerCompleter.future;
 }
 
-Future<void> waiteGCThen(FutureOr<void> Function() action, {Object? check}) {
+Future<void> _waitGCThen(FutureOr<void> Function() action, {Object? check}) {
   check ??= Object();
-  final future = waiteGC(check).then((_) async {
+  final future = _waitGC(check).then((_) async {
     await action();
   });
   check = null;
   return future;
 }
 
-extension GCFutureExt on List<Future> {
-  void gc(FutureOr<void> Function() action, {Object? check}) =>
-      add(waiteGCThen(action, check: check));
+List<Future> _futures = [];
+
+void afterGC(FutureOr<void> Function() action, {Object? check}) {
+  _futures.add(_waitGCThen(action, check: check));
+}
+
+Future<void> tearDownWaitAllGC() async {
+  while (_futures.isNotEmpty) {
+    final fs = [..._futures];
+    _futures.clear();
+    await Future.wait(fs);
+  }
 }

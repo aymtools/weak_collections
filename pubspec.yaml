@@ -13,6 +13,9 @@ topics:
 environment:
   sdk: '>=2.17.0 <4.0.0'
 
+dependencies:
+  meta: ^1.16.0
+
 dev_dependencies:
   test: ^1.25.14
   lints: ^5.1.1

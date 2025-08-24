@@ -1,4 +1,5 @@
 import 'dart:collection';
+
 import 'package:test/test.dart';
 import 'package:weak_collections/src/weak_queue.dart';
 
@@ -371,37 +372,36 @@ void main() {
 
     test('add', () {
       expect(
-            () => queue.forEach((_) => queue.add(TestVal('d'))),
+        () => queue.forEach((_) => queue.add(TestVal('d'))),
         throwsConcurrentModificationError,
       );
     });
 
     test('addAll', () {
       expect(
-            () =>
-            queue.forEach((_) =>
-                queue.addAll([TestVal('d'), TestVal('e'), TestVal('f')])),
+        () => queue.forEach(
+            (_) => queue.addAll([TestVal('d'), TestVal('e'), TestVal('f')])),
         throwsConcurrentModificationError,
       );
     });
 
     test('addFirst', () {
       expect(
-            () => queue.forEach((_) => queue.addFirst(TestVal('z'))),
+        () => queue.forEach((_) => queue.addFirst(TestVal('z'))),
         throwsConcurrentModificationError,
       );
     });
 
     test('removeFirst', () {
       expect(
-            () => queue.forEach((_) => queue.removeFirst()),
+        () => queue.forEach((_) => queue.removeFirst()),
         throwsConcurrentModificationError,
       );
     });
 
     test('removeLast', () {
       expect(
-            () => queue.forEach((_) => queue.removeLast()),
+        () => queue.forEach((_) => queue.removeLast()),
         throwsConcurrentModificationError,
       );
     });
@@ -420,8 +420,7 @@ void main() {
     final c = SubVal('c');
     final d = SubVal('d');
 
-    var subValQueue = WeakQueue<TestVal>()
-      ..addAll([a, b]);
+    var subValQueue = WeakQueue<TestVal>()..addAll([a, b]);
     var testValQueue = subValQueue.cast<SubVal>();
     testValQueue.addAll([c, d]);
     expect(
@@ -482,4 +481,3 @@ void main() {
 final throwsConcurrentModificationError = throwsA(
   const TypeMatcher<ConcurrentModificationError>(),
 );
-

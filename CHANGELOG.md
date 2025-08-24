@@ -1,6 +1,6 @@
 ## 1.3.3
 
-* Use WeakReference for HashEntity management
+* Use WeakReference for HashEntry management
 
 ## 1.3.2
 

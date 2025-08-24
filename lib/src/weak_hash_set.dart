@@ -1,5 +1,6 @@
 import 'dart:collection';
 
+import 'package:meta/meta.dart';
 import 'package:weak_collections/src/tools.dart';
 
 // ignore: constant_identifier_names
@@ -162,9 +163,9 @@ class WeakHashSet<E extends Object> with SetMixin<E> {
     if (_queue.isEmpty) return;
     _WeakHashSetEntry<E> e;
     while (_queue.isNotEmpty) {
-      final entity = _queue.removeFirst().target;
-      if (entity == null) continue;
-      e = entity;
+      final entryQ = _queue.removeFirst().target;
+      if (entryQ == null) continue;
+      e = entryQ;
       int index = e.hashCode & (_buckets.length - 1);
       var entry = _buckets[index];
       if (entry == null) continue;
@@ -480,4 +481,18 @@ class _CustomWeakHashSet<E extends Object> extends WeakHashSet<E> {
   @override
   WeakHashSet<E> _newSet() =>
       _CustomWeakHashSet<E>(_equality, _hasher, _validKey);
+}
+
+@visibleForTesting
+extension WeakHashSetTestExt<E extends Object> on WeakHashSet<E> {
+  @visibleForTesting
+  Object? getWeakEntry(E value) {
+    int index = _hashCode(value) & (_buckets.length - 1);
+    var entry = _buckets[index];
+    while (entry != null) {
+      if (_equals(value, entry.keyWeakRef.target)) return entry;
+      entry = entry.next;
+    }
+    return null;
+  }
 }

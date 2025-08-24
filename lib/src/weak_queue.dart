@@ -1,5 +1,7 @@
 import 'dart:collection';
 
+import 'package:meta/meta.dart';
+
 class WeakQueue<T extends Object> with Iterable<T> implements Queue<T> {
   final Queue<_WeakRefEntry<T>> _refs = Queue<_WeakRefEntry<T>>();
 
@@ -161,6 +163,8 @@ class _WeakRefEntry<T extends Object> {
   final Finalizer<WeakReference<_WeakRefEntry<T>>> finalizer;
   bool _isCollected = false;
 
+  T? get value => _value.target;
+
   _WeakRefEntry(T value, this.finalizer) : _value = WeakReference(value) {
     finalizer.attach(value, WeakReference(this), detach: _value);
   }
@@ -257,4 +261,20 @@ class _WeakQueueCastView<S extends Object, R>
   Queue<E> cast<E>() {
     return _WeakQueueCastView<S, E>(_source);
   }
+}
+
+@visibleForTesting
+extension WeakQueueTestExt<E extends Object> on WeakQueue<E> {
+  @visibleForTesting
+  Object? getWeakEntry(E value) {
+    for (var entry in [..._refs]) {
+      if (entry.value == value) {
+        return entry;
+      }
+    }
+    return null;
+  }
+
+  @visibleForTesting
+  List<Object> getWeakEntries() => [..._refs];
 }

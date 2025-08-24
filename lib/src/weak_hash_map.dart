@@ -1,5 +1,6 @@
 import 'dart:collection';
 
+import 'package:meta/meta.dart';
 import 'package:weak_collections/src/tools.dart';
 
 import 'weak_hash_set.dart';
@@ -284,9 +285,9 @@ class WeakHashMap<K extends Object, V> with MapMixin<K, V> {
     if (_queue.isEmpty) return;
     _WeakHashMapEntry<K, V> e;
     while (_queue.isNotEmpty) {
-      final entity = _queue.removeFirst().target;
-      if (entity == null) continue;
-      e = entity;
+      final entryQ = _queue.removeFirst().target;
+      if (entryQ == null) continue;
+      e = entryQ;
 
       int index = e.hashCode & (_buckets.length - 1);
       var entry = _buckets[index];
@@ -930,4 +931,34 @@ class _CustomWeakHashMap<K extends Object, V> extends WeakHashMap<K, V> {
 
   @override
   Set<K> _newKeySet() => WeakHashSet<K>();
+}
+
+@visibleForTesting
+extension WeakHashMapTestExt<K extends Object, V> on WeakHashMap<K, V> {
+  get __hashCode => () {
+        return this is _IdentityWeakHashMap
+            ? identityHashCode
+            : this is _CustomWeakHashMap
+                ? (this as _CustomWeakHashMap<K, V>)._hashCode
+                : defaultHashCode;
+      }();
+
+  get __equals => () {
+        return this is _IdentityWeakHashMap
+            ? identical
+            : this is _CustomWeakHashMap
+                ? (this as _CustomWeakHashMap<K, V>)._equals
+                : defaultEquals;
+      }();
+
+  @visibleForTesting
+  Object? getWeakEntry(K key) {
+    int index = __hashCode(key) & (_buckets.length - 1);
+    var entry = _buckets[index];
+    while (entry != null) {
+      if (__equals(key, entry.keyWeakRef.target)) return entry;
+      entry = entry.next;
+    }
+    return null;
+  }
 }

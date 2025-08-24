@@ -1,3 +1,12 @@
+class TestObject {
+  final String id;
+
+  TestObject(this.id);
+
+  @override
+  String toString() => 'TestObject(id: $id)';
+}
+
 class TestVal {
   final String debugName;
 
