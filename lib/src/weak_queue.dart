@@ -6,6 +6,24 @@ class WeakQueue<T extends Object> with Iterable<T> implements Queue<T> {
   late final Finalizer<WeakReference<_WeakRefEntry<T>>> _finalizer =
       Finalizer((ref) => ref.target?._isCollected = true);
 
+  WeakQueue();
+
+  factory WeakQueue.of(Iterable<T> values) {
+    final queue = WeakQueue<T>();
+    queue.addAll(values);
+    return queue;
+  }
+
+  /// 仅仅是将 element 添加到queue中
+  /// **与默认的Queue 效果不同**
+  factory WeakQueue.from(Iterable<dynamic> elements) {
+    WeakQueue<T> result = WeakQueue<T>();
+    for (final element in elements) {
+      result.addLast(element as T);
+    }
+    return result;
+  }
+
   @override
   void add(T value) {
     final ref = _WeakRefEntry(value, _finalizer);

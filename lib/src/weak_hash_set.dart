@@ -1,5 +1,7 @@
 import 'dart:collection';
 
+import 'package:weak_collections/src/tools.dart';
+
 // ignore: constant_identifier_names
 const int _MODIFICATION_COUNT_MASK = 0x3fffffff;
 
@@ -90,8 +92,6 @@ class WeakHashSet<E extends Object> with SetMixin<E> {
 
   int _hashCode(Object? e) => e.hashCode;
 
-  // static Set<R> _newEmpty<R extends Object>() => WeakSet<R>();
-
   final Queue<WeakReference<_WeakHashSetEntry<E>>> _queue = Queue();
   late final Finalizer<WeakReference<_WeakHashSetEntry<E>>> _finalizer =
       Finalizer((entry) {
@@ -99,6 +99,45 @@ class WeakHashSet<E extends Object> with SetMixin<E> {
       _queue.add(entry);
     }
   });
+
+  WeakHashSet();
+
+  factory WeakHashSet.identity() => _IdentityWeakHashSet<E>();
+
+  factory WeakHashSet.from(Iterable<dynamic> elements) {
+    WeakHashSet<E> result = WeakHashSet<E>();
+    for (final element in elements) {
+      result.add(element as E);
+    }
+    return result;
+  }
+
+  factory WeakHashSet.of(Iterable<E> elements) =>
+      WeakHashSet<E>()..addAll(elements);
+
+  factory WeakHashSet.custom(
+      {bool Function(E, E)? equals,
+      int Function(E)? hashCode,
+      bool Function(Object?)? isValidKey}) {
+    if (isValidKey == null) {
+      if (hashCode == null) {
+        if (equals == null) {
+          return WeakHashSet<E>();
+        }
+        hashCode = defaultHashCode;
+      } else {
+        if (identical(identityHashCode, hashCode) &&
+            identical(identical, equals)) {
+          return _IdentityWeakHashSet<E>();
+        }
+        equals ??= defaultEquals;
+      }
+    } else {
+      hashCode ??= defaultHashCode;
+      equals ??= defaultEquals;
+    }
+    return _CustomWeakHashSet<E>(equals, hashCode, isValidKey);
+  }
 
   // Iterable.
   @override
@@ -356,11 +395,13 @@ class WeakHashSet<E extends Object> with SetMixin<E> {
     _buckets = newBuckets;
   }
 
+  Set<E> _newSet() => WeakHashSet();
+
   //会生成强引用
   @override
   Set<E> toSet() {
     _expungeStaleEntries();
-    Set<E> result = {};
+    Set<E> result = _newSet();
     for (int i = 0; i < _buckets.length; i++) {
       var entry = _buckets[i];
       while (entry != null) {
@@ -373,4 +414,70 @@ class WeakHashSet<E extends Object> with SetMixin<E> {
     }
     return result;
   }
+}
+
+class _IdentityWeakHashSet<E extends Object> extends WeakHashSet<E> {
+  @override
+  int _hashCode(Object? e) => identityHashCode(e);
+
+  @override
+  bool _equals(Object? e1, Object? e2) => identical(e1, e2);
+
+  @override
+  WeakHashSet<E> _newSet() => _IdentityWeakHashSet<E>();
+}
+
+class _CustomWeakHashSet<E extends Object> extends WeakHashSet<E> {
+  final bool Function(E, E) _equality;
+  final int Function(E) _hasher;
+  final bool Function(Object?) _validKey;
+
+  _CustomWeakHashSet(
+      this._equality, this._hasher, bool Function(Object?)? validKey)
+      : _validKey = (validKey != null) ? validKey : TypeTest<E>().test;
+
+  @override
+  bool remove(Object? element) {
+    if (!_validKey(element)) return false;
+    return super.remove(element);
+  }
+
+  @override
+  bool contains(Object? element) {
+    if (!_validKey(element)) return false;
+    return super.contains(element);
+  }
+
+  @override
+  E? lookup(Object? element) {
+    if (!_validKey(element)) return null;
+    return super.lookup(element);
+  }
+
+  @override
+  bool containsAll(Iterable<Object?> elements) {
+    for (Object? element in elements) {
+      if (!_validKey(element) || !this.contains(element)) return false;
+    }
+    return true;
+  }
+
+  @override
+  void removeAll(Iterable<Object?> elements) {
+    for (Object? element in elements) {
+      if (_validKey(element)) {
+        super._remove(element, _hashCode(element));
+      }
+    }
+  }
+
+  @override
+  bool _equals(Object? e1, Object? e2) => _equality(e1 as E, e2 as E);
+
+  @override
+  int _hashCode(Object? e) => _hasher(e as E);
+
+  @override
+  WeakHashSet<E> _newSet() =>
+      _CustomWeakHashSet<E>(_equality, _hasher, _validKey);
 }

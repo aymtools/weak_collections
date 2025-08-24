@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:test/test.dart';
 import 'package:weak_collections/weak_collections.dart';
 
@@ -7,6 +5,19 @@ import 'tools.dart';
 import 'vm_tools.dart';
 
 void main() {
+  late List<Future> futures;
+  late List objects;
+  setUp(() {
+    futures = [];
+    objects = [];
+  });
+
+  tearDown(() async {
+    // final list = List.filled(102000000, () => Object());
+    // await waiteGC(list);
+    await Future.wait(futures);
+  });
+
   group('WeakHashMap garbage collection', () {
     test('entry should be collected after GC', () async {
       final map = WeakHashMap<TestVal, String>();
@@ -17,10 +28,12 @@ void main() {
       expect(map.isNotEmpty, isTrue);
 
       // 强制 GC
-      waiteGC(a).then((_) {
-        expect(map.isEmpty, isTrue);
-        expect(map.containsValue('hello'), isFalse);
-      });
+      futures.add(
+        waiteGC(a).then((_) {
+          expect(map.isEmpty, isTrue);
+          expect(map.containsValue('hello'), isFalse);
+        }),
+      );
       // 删除强引用
       a = null;
     });
@@ -38,11 +51,15 @@ void main() {
       final aWeak = WeakReference(a);
       expect(aWeak.target, isNotNull);
 
+      objects.add(a);
       // 强制 GC
-      waiteGC(map).then((_) {
-        expect(entity.target, isNull);
-        expect(aWeak.target, isNotNull);
-      });
+      futures.add(
+        waiteGC(map).then((_) {
+          expect(entity.target, isNull);
+          expect(aWeak, isNotNull);
+          expect(aWeak.target, isNotNull, reason: 'objects ref');
+        }),
+      );
       // 删除强引用
       map = null;
     });
@@ -59,9 +76,11 @@ void main() {
       expect(set.isNotEmpty, isTrue);
 
       // 强制 GC
-      waiteGC(a).then((_) {
-        expect(set.isEmpty, isTrue);
-      });
+      futures.add(
+        waiteGC(a).then((_) {
+          expect(set.isEmpty, isTrue);
+        }),
+      );
       // 删除强引用
       a = null;
     });
@@ -79,16 +98,18 @@ void main() {
       expect(aWeak.target, isNotNull);
 
       // 强制 GC
-      waiteGC(set).then((_) {
-        expect(aWeak.target, isNull);
-      });
+      futures.add(
+        waiteGC(set).then((_) {
+          expect(aWeak.target, isNull);
+        }),
+      );
       // 删除强引用
       set = null;
     });
   });
 
   group('WeakQueue garbage collection', () {
-    test('entry should be collected after GC', () {
+    test('entry should be collected after GC', () async {
       final queue = WeakQueue<TestVal>();
 
       TestVal? a = TestVal('a');
@@ -98,32 +119,13 @@ void main() {
       expect(queue.isNotEmpty, isTrue);
 
       // 强制 GC
-      waiteGC(a).then((_) {
-        expect(queue.isEmpty, isTrue);
-      });
+      futures.add(
+        waiteGC(a).then((_) {
+          expect(queue.isEmpty, isTrue);
+        }),
+      );
       // 删除强引用
       a = null;
     });
   });
-}
-
-Future<void> waiteVMGC(Object check) async {
-  await VmServiceTool.instance.gc();
-  return;
-}
-
-Future<void> waiteGC(Object check) async {
-  if (await VmServiceTool.instance.canUseVMGc) {
-    return waiteVMGC(check);
-  }
-  Completer<void> finalizerCompleter = Completer();
-  void call() async {
-    // 等待执行完 相关的 finalizer
-    await Future.delayed(Duration.zero);
-    finalizerCompleter.complete();
-  }
-
-  Finalizer<int> finalizer = Finalizer((_) => call());
-  finalizer.attach(check, 1);
-  return finalizerCompleter.future;
 }

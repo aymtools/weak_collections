@@ -1,5 +1,7 @@
 import 'dart:collection';
 
+import 'package:weak_collections/src/tools.dart';
+
 import 'weak_hash_set.dart';
 
 // ignore: constant_identifier_names
@@ -175,6 +177,79 @@ class WeakHashMap<K extends Object, V> with MapMixin<K, V> {
   var _buckets = List<_WeakHashMapEntry<K, V>?>.filled(_INITIAL_CAPACITY, null);
   int _modificationCount = 0;
 
+  WeakHashMap();
+
+  factory WeakHashMap.identity() => _IdentityWeakHashMap<K, V>();
+
+  factory WeakHashMap.from(Map<dynamic, dynamic> other) {
+    WeakHashMap<K, V> result = WeakHashMap<K, V>();
+    other.forEach((dynamic k, dynamic v) {
+      result[k as K] = v as V;
+    });
+    return result;
+  }
+
+  factory WeakHashMap.of(Map<K, V> other) => WeakHashMap<K, V>()..addAll(other);
+
+  factory WeakHashMap.fromIterable(Iterable iterable,
+      {K Function(dynamic element)? key, V Function(dynamic element)? value}) {
+    final map = WeakHashMap<K, V>();
+    key ??= unsafeCast<K>;
+    value ??= unsafeCast<V>;
+    for (final e in iterable) {
+      map[key(e)] = value(e);
+    }
+    return map;
+  }
+
+  factory WeakHashMap.fromIterables(Iterable<K> keys, Iterable<V> values) {
+    final map = WeakHashMap<K, V>();
+    Iterator<K> keyIterator = keys.iterator;
+    Iterator<V> valueIterator = values.iterator;
+
+    bool hasNextKey = keyIterator.moveNext();
+    bool hasNextValue = valueIterator.moveNext();
+
+    while (hasNextKey && hasNextValue) {
+      map[keyIterator.current] = valueIterator.current;
+      hasNextKey = keyIterator.moveNext();
+      hasNextValue = valueIterator.moveNext();
+    }
+
+    if (hasNextKey || hasNextValue) {
+      throw ArgumentError("Iterables do not have same length.");
+    }
+    return map;
+  }
+
+  factory WeakHashMap.fromEntries(Iterable<MapEntry<K, V>> entries) =>
+      WeakHashMap<K, V>()..addEntries(entries);
+
+  factory WeakHashMap.custom({
+    bool Function(K, K)? equals,
+    int Function(K)? hashCode,
+    bool Function(dynamic)? isValidKey,
+  }) {
+    if (isValidKey == null) {
+      if (hashCode == null) {
+        if (equals == null) {
+          return WeakHashMap<K, V>();
+        }
+        hashCode = defaultHashCode;
+      } else {
+        if (identical(identityHashCode, hashCode) &&
+            identical(identical, equals)) {
+          return _IdentityWeakHashMap<K, V>();
+        }
+        equals ??= defaultEquals;
+      }
+    } else {
+      hashCode ??= defaultHashCode;
+      equals ??= defaultEquals;
+    }
+    return _CustomWeakHashMap<K, V>(equals, hashCode, isValidKey);
+  }
+
   @override
   int get length {
     _expungeStaleEntries();
@@ -269,8 +344,9 @@ class WeakHashMap<K extends Object, V> with MapMixin<K, V> {
     final index = hashCode & (buckets.length - 1);
     var entry = buckets[index];
     while (entry != null) {
-      if (hashCode == entry.hashCode && entry.keyWeakRef.target == key)
+      if (hashCode == entry.hashCode && entry.keyWeakRef.target == key) {
         return true;
+      }
       entry = entry.next;
     }
     return false;
@@ -283,8 +359,9 @@ class WeakHashMap<K extends Object, V> with MapMixin<K, V> {
     for (int i = 0; i < length; i++) {
       var entry = buckets[i];
       while (entry != null) {
-        if (entry.keyWeakRef.target != null && entry.value == value)
+        if (entry.keyWeakRef.target != null && entry.value == value) {
           return true;
+        }
         entry = entry.next;
       }
     }
@@ -536,4 +613,321 @@ class WeakHashMap<K extends Object, V> with MapMixin<K, V> {
     Set<K> set = WeakHashSet();
     return set;
   }
+}
+
+class _IdentityWeakHashMap<K extends Object, V> extends WeakHashMap<K, V> {
+  @override
+  bool containsKey(Object? key) {
+    final hashCode = identityHashCode(key);
+    final buckets = _buckets;
+    final index = hashCode & (buckets.length - 1);
+    var entry = buckets[index];
+    while (entry != null) {
+      if (hashCode == entry.hashCode &&
+          identical(entry.keyWeakRef.target, key)) {
+        return true;
+      }
+      entry = entry.next;
+    }
+    return false;
+  }
+
+  @override
+  V? operator [](Object? key) {
+    if (key == null) return null;
+    _expungeStaleEntries();
+    final hashCode = identityHashCode(key);
+    final buckets = _buckets;
+    final index = hashCode & (buckets.length - 1);
+    var entry = buckets[index];
+    while (entry != null) {
+      if (hashCode == entry.hashCode &&
+          identical(entry.keyWeakRef.target, key)) {
+        return entry.value;
+      }
+      entry = entry.next;
+    }
+    return null;
+  }
+
+  @override
+  void operator []=(K key, V? value) {
+    _expungeStaleEntries();
+    if (value == null) {
+      _remove(key);
+      return;
+    }
+    _put(key, value);
+  }
+
+  @override
+  V putIfAbsent(K key, V Function() ifAbsent) {
+    _expungeStaleEntries();
+    final hashCode = identityHashCode(key);
+    final buckets = _buckets;
+    final length = buckets.length;
+    final index = hashCode & (length - 1);
+    var entry = buckets[index];
+    while (entry != null) {
+      if (hashCode == entry.hashCode &&
+          identical(entry.keyWeakRef.target, key)) {
+        return entry.value!;
+      }
+      entry = entry.next;
+    }
+    final stamp = _modificationCount;
+    V value = ifAbsent();
+    if (stamp == _modificationCount) {
+      _addEntry(buckets, index, length, key, value, hashCode);
+    } else {
+      this[key] = value;
+    }
+    return value;
+  }
+
+  @override
+  V? remove(Object? key) {
+    _expungeStaleEntries();
+    return _remove(key);
+  }
+
+  @override
+  V update(K key, V Function(V value) update, {V Function()? ifAbsent}) {
+    _expungeStaleEntries();
+    final hashCode = identityHashCode(key);
+    final buckets = _buckets;
+    final length = buckets.length;
+    final index = hashCode & (length - 1);
+    var entry = buckets[index];
+    while (entry != null) {
+      if (hashCode == entry.hashCode &&
+          identical(entry.keyWeakRef.target, key)) {
+        return entry.value = update(entry.value as V);
+      }
+      entry = entry.next;
+    }
+    if (ifAbsent != null) {
+      V newValue = ifAbsent();
+      _addEntry(buckets, index, length, key, newValue, hashCode);
+      return newValue;
+    } else {
+      throw ArgumentError.value(key, "key", "Key not in map.");
+    }
+  }
+
+  @override
+  void _put(K key, V value) {
+    final hashCode = identityHashCode(key);
+    final buckets = _buckets;
+    final length = buckets.length;
+    final index = hashCode & (length - 1);
+    var entry = buckets[index];
+    while (entry != null) {
+      if (hashCode == entry.hashCode &&
+          identical(entry.keyWeakRef.target, key)) {
+        entry.value = value;
+        return;
+      }
+      entry = entry.next;
+    }
+    _addEntry(buckets, index, length, key, value, hashCode);
+  }
+
+  @override
+  V? _remove(Object? key) {
+    if (key == null) return null;
+    final hashCode = identityHashCode(key);
+    final buckets = _buckets;
+    final index = hashCode & (buckets.length - 1);
+    var entry = buckets[index];
+    _WeakHashMapEntry<K, V>? previous;
+    while (entry != null) {
+      final next = entry.next;
+      if (hashCode == entry.hashCode &&
+          identical(entry.keyWeakRef.target, key)) {
+        _removeEntry(entry, previous, index);
+        _elementCount--;
+        _modificationCount =
+            (_modificationCount + 1) & _MODIFICATION_COUNT_MASK;
+        return entry.value;
+      }
+      previous = entry;
+      entry = next;
+    }
+    return null;
+  }
+
+  @override
+  Set<K> _newKeySet() => WeakHashSet<K>();
+}
+
+class _CustomWeakHashMap<K extends Object, V> extends WeakHashMap<K, V> {
+  final bool Function(K, K) _equals;
+  final int Function(K) _hashCode;
+  final bool Function(Object?) _validKey;
+
+  _CustomWeakHashMap(
+      this._equals, this._hashCode, bool Function(Object?)? validKey)
+      : _validKey = (validKey != null) ? validKey : TypeTest<K>().test;
+
+  @override
+  bool containsKey(Object? key) {
+    if (!_validKey(key)) return false;
+    K lkey = key as K;
+    final hashCode = _hashCode(lkey);
+    final buckets = _buckets;
+    final index = hashCode & (buckets.length - 1);
+    var entry = buckets[index];
+    while (entry != null) {
+      if (hashCode == entry.hashCode) {
+        final k = entry.keyWeakRef.target;
+        if (k != null && _equals(k, lkey)) {
+          return true;
+        }
+      }
+      entry = entry.next;
+    }
+    return false;
+  }
+
+  @override
+  V? operator [](Object? key) {
+    if (key == null || !_validKey(key)) return null;
+    _expungeStaleEntries();
+    K lkey = key as K;
+    final hashCode = _hashCode(lkey);
+    final buckets = _buckets;
+    final index = hashCode & (buckets.length - 1);
+    var entry = buckets[index];
+    while (entry != null) {
+      if (hashCode == entry.hashCode) {
+        final k = entry.keyWeakRef.target;
+        if (k != null && _equals(k, lkey)) {
+          return entry.value;
+        }
+      }
+      entry = entry.next;
+    }
+    return null;
+  }
+
+  @override
+  void operator []=(K key, V? value) {
+    _expungeStaleEntries();
+    if (value == null) {
+      _remove(key);
+      return;
+    }
+    _put(key, value);
+  }
+
+  @override
+  V putIfAbsent(K key, V Function() ifAbsent) {
+    _expungeStaleEntries();
+    final hashCode = _hashCode(key);
+    final buckets = _buckets;
+    final length = buckets.length;
+    final index = hashCode & (length - 1);
+    var entry = buckets[index];
+    while (entry != null) {
+      if (hashCode == entry.hashCode) {
+        final k = entry.keyWeakRef.target;
+        if (k != null && _equals(k, key)) {
+          return entry.value as V;
+        }
+      }
+      entry = entry.next;
+    }
+    int stamp = _modificationCount;
+    V value = ifAbsent();
+    if (stamp == _modificationCount) {
+      _addEntry(buckets, index, length, key, value, hashCode);
+    } else {
+      this[key] = value;
+    }
+    return value;
+  }
+
+  @override
+  V? remove(Object? key) {
+    if (!_validKey(key)) return null;
+    _expungeStaleEntries();
+    return _remove(key);
+  }
+
+  @override
+  V update(K key, V Function(V value) update, {V Function()? ifAbsent}) {
+    _expungeStaleEntries();
+    final hashCode = _hashCode(key);
+    final buckets = _buckets;
+    final length = buckets.length;
+    final index = hashCode & (length - 1);
+    var entry = buckets[index];
+    while (entry != null) {
+      if (hashCode == entry.hashCode) {
+        final k = entry.keyWeakRef.target;
+        if (k != null && _equals(k, key)) {
+          return entry.value = update(entry.value as V);
+        }
+      }
+      entry = entry.next;
+    }
+    if (ifAbsent != null) {
+      V newValue = ifAbsent();
+      _addEntry(buckets, index, length, key, newValue, hashCode);
+      return newValue;
+    } else {
+      throw ArgumentError.value(key, "key", "Key not in map.");
+    }
+  }
+
+  @override
+  void _put(K key, V value) {
+    final hashCode = _hashCode(key);
+    final buckets = _buckets;
+    final length = buckets.length;
+    final index = hashCode & (length - 1);
+    var entry = buckets[index];
+    while (entry != null) {
+      if (hashCode == entry.hashCode) {
+        final k = entry.keyWeakRef.target;
+        if (k != null && _equals(k, key)) {
+          entry.value = value;
+          return;
+        }
+      }
+      entry = entry.next;
+    }
+    _addEntry(buckets, index, length, key, value, hashCode);
+  }
+
+  @override
+  V? _remove(Object? key) {
+    if (!_validKey(key)) return null;
+    K lkey = key as K;
+    final hashCode = _hashCode(lkey);
+    final buckets = _buckets;
+    final index = hashCode & (buckets.length - 1);
+    var entry = buckets[index];
+    _WeakHashMapEntry<K, V>? previous;
+    while (entry != null) {
+      final next = entry.next;
+      if (hashCode == entry.hashCode) {
+        final k = entry.keyWeakRef.target;
+        if (k != null && _equals(k, key)) {
+          _removeEntry(entry, previous, index);
+          _elementCount--;
+          _modificationCount =
+              (_modificationCount + 1) & _MODIFICATION_COUNT_MASK;
+          return entry.value;
+        }
+      }
+      previous = entry;
+      entry = next;
+    }
+    return null;
+  }
+
+  @override
+  Set<K> _newKeySet() => WeakHashSet<K>();
 }
