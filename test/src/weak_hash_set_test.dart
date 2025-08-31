@@ -22,6 +22,35 @@ void main() {
       expect(set.contains(nonExisting), isFalse);
     });
 
+    test('.contains() with Rewrite equals', () {
+      final set = WeakHashSet<TestEqualsObject>();
+
+      final a = TestEqualsObject('a');
+      final b = TestEqualsObject('b');
+      final c = TestEqualsObject('c');
+      final c2 = TestEqualsObject('c');
+
+      set.addAll([a, b, c]);
+
+      expect(set.length, equals(3));
+      expect(set.contains(a), isTrue);
+      expect(set.contains(b), isTrue);
+      expect(set.contains(c), isTrue);
+      expect(set.contains(c2), isTrue);
+    });
+
+    test('.add()', () {
+      final set = WeakHashSet<TestVal>();
+
+      final v1 = TestVal('a');
+      final r1 = set.add(v1);
+      assert(r1 == true, isTrue);
+      // print('returns $r1');
+      final r2 = set.add(v1);
+      // print('returns $r2');
+      assert(r2 == false, isTrue);
+    });
+
     test('.remove()', () {
       final set = WeakHashSet<TestVal>();
 

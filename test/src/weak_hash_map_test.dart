@@ -25,6 +25,77 @@ void main() {
       expect(map.containsKey(nonExisting), isFalse);
     });
 
+    test('.contains() with Rewrite equals', () {
+      final map = WeakHashMap<TestEqualsObject, String>();
+
+      final a = TestEqualsObject('a');
+      final b = TestEqualsObject('b');
+      final c = TestEqualsObject('c');
+      final c2 = TestEqualsObject('c');
+
+      map[a] = 'a';
+      map[b] = 'b';
+      map[c] = 'c';
+
+      expect(map.length, equals(3));
+      expect(map.containsKey(a), isTrue);
+      expect(map.containsKey(b), isTrue);
+      expect(map.containsKey(c), isTrue);
+      expect(map.containsKey(c2), isTrue);
+    });
+
+    test('.get()', () {
+      final map = WeakHashMap<TestVal, String>();
+
+      final a = TestVal('a');
+      final b = TestVal('b');
+      final c = TestVal('c');
+      final nonExisting = TestVal('d');
+
+      map[a] = a.debugName;
+      map[b] = b.debugName;
+      map[c] = c.debugName;
+
+      expect(map.length, equals(3));
+      expect(map.containsKey(a), isTrue);
+      expect(map.containsKey(b), isTrue);
+      expect(map.containsKey(c), isTrue);
+      expect(map.containsValue(c.debugName), isTrue);
+      expect(map.containsKey(nonExisting), isFalse);
+
+      expect(map[a], 'a');
+      expect(map[b], 'b');
+      expect(map[c], 'c');
+      expect(map[nonExisting], isNull);
+    });
+
+    test('.get() with Rewrite equals', () {
+      final map = WeakHashMap<TestEqualsObject, String>();
+
+      final a = TestEqualsObject('a');
+      final b = TestEqualsObject('b');
+      final c = TestEqualsObject('c');
+      final c2 = TestEqualsObject('c');
+      final nonExisting = TestEqualsObject('d');
+
+      map[a] = 'a';
+      map[b] = 'b';
+      map[c] = 'c';
+
+      expect(map.length, equals(3));
+      expect(map.containsKey(a), isTrue);
+      expect(map.containsKey(b), isTrue);
+      expect(map.containsKey(c), isTrue);
+      expect(map.containsValue('c'), isTrue);
+      expect(map.containsKey(nonExisting), isFalse);
+
+      expect(map[a], 'a');
+      expect(map[b], 'b');
+      expect(map[c], 'c');
+      expect(map[c2], 'c');
+      expect(map[nonExisting], isNull);
+    });
+
     test('.remove()', () {
       final map = WeakHashMap<TestVal, String>();
 
@@ -43,6 +114,26 @@ void main() {
       expect(map.containsValue(v2.debugName), isFalse);
     });
 
+    test('.remove() with Rewrite equals', () {
+      final map = WeakHashMap<TestEqualsObject, String>();
+
+      final a = TestEqualsObject('a');
+      final b = TestEqualsObject('b');
+      final c = TestEqualsObject('c');
+      final c2 = TestEqualsObject('c');
+
+      map[a] = 'a';
+      map[b] = 'b';
+      map[c] = 'c';
+
+      map.remove(c2);
+
+      expect(map.length, equals(2));
+      expect(map.containsKey(b), isTrue);
+      expect(map.containsKey(c), isFalse);
+      expect(map.containsValue('c'), isFalse);
+    });
+
     test('.put()', () {
       final map = WeakHashMap<TestVal, String>();
 
@@ -58,6 +149,28 @@ void main() {
       expect(map.length, equals(3));
       expect(map.containsKey(v3), true);
       expect(map.containsValue(v3.debugName), false);
+    });
+
+    test('.put() with Rewrite equals', () {
+      final map = WeakHashMap<TestEqualsObject, String>();
+
+      final a = TestEqualsObject('a');
+      final b = TestEqualsObject('b');
+      final c = TestEqualsObject('c');
+      final c2 = TestEqualsObject('c');
+
+      map[a] = 'a';
+      map[b] = 'b';
+      map[c] = 'c';
+
+      map[c2] = 'd';
+
+      expect(map.length, equals(3));
+      expect(map.containsKey(b), isTrue);
+
+      expect(map.containsKey(c), isTrue);
+      expect(map.containsValue('c'), isFalse);
+      expect(map.containsValue('d'), isTrue);
     });
   });
 

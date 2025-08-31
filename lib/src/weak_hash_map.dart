@@ -961,4 +961,7 @@ extension WeakHashMapTestExt<K extends Object, V> on WeakHashMap<K, V> {
     }
     return null;
   }
+
+  @visibleForTesting
+  int getBucketLength() => _buckets.length;
 }

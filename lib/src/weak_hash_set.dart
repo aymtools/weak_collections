@@ -495,4 +495,7 @@ extension WeakHashSetTestExt<E extends Object> on WeakHashSet<E> {
     }
     return null;
   }
+
+  @visibleForTesting
+  int getBucketLength() => _buckets.length;
 }
