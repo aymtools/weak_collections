@@ -1,3 +1,7 @@
+## 1.4.0
+
+* WeakHashMap,WeakHashSet Add custom constructor for configurable isValidKey, hashCode and equals
+
 ## 1.3.3
 
 * Use WeakReference for HashEntry management
