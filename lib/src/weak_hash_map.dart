@@ -13,7 +13,10 @@ class _WeakHashMapEntry<K extends Object, V> {
   V? value;
 
   _WeakHashMapEntry<K, V>? next;
-  final Finalizer<WeakReference<_WeakHashMapEntry<K, V>>> finalizer;
+
+  // final Finalizer<WeakReference<_WeakHashMapEntry<K, V>>> finalizer;
+
+  WeakReferenceQueue<K, _WeakHashMapEntry<K, V>>? _queue;
 
   @override
   final int hashCode;
@@ -23,13 +26,17 @@ class _WeakHashMapEntry<K extends Object, V> {
     this.value,
     this.hashCode,
     this.next,
-    this.finalizer,
+    this._queue,
   ) : keyWeakRef = WeakReference(key) {
-    finalizer.attach(key, WeakReference(this), detach: keyWeakRef);
+    _queue?.attach(keyWeakRef, this,
+        finalizationCallback: _WeakHashMapEntry._finalize);
   }
 
   _WeakHashMapEntry<K, V>? remove() {
-    finalizer.detach(keyWeakRef);
+    _queue?.detach(keyWeakRef);
+    _queue = null;
+    value = null;
+
     final result = next;
     next = null;
     return result;
@@ -38,6 +45,11 @@ class _WeakHashMapEntry<K extends Object, V> {
   @override
   bool operator ==(Object other) {
     return identical(this, other);
+  }
+
+  static void _finalize(_WeakHashMapEntry entry) {
+    entry.value = null;
+    entry._queue = null;
   }
 }
 
@@ -164,15 +176,18 @@ class WeakHashMap<K extends Object, V> with MapMixin<K, V> {
   // ignore: constant_identifier_names
   static const int _INITIAL_CAPACITY = 8;
 
-  final Queue<WeakReference<_WeakHashMapEntry<K, V>>> _queue = Queue();
+  // final Queue<WeakReference<_WeakHashMapEntry<K, V>>> _queue = Queue();
+  //
+  // late final Finalizer<WeakReference<_WeakHashMapEntry<K, V>>> _finalizer =
+  //     Finalizer((entry) {
+  //   if (entry.target != null) {
+  //     entry.target?.value = null;
+  //     _queue.add(entry);
+  //   }
+  // });
 
-  late final Finalizer<WeakReference<_WeakHashMapEntry<K, V>>> _finalizer =
-      Finalizer((entry) {
-    if (entry.target != null) {
-      entry.target?.value = null;
-      _queue.add(entry);
-    }
-  });
+  final WeakReferenceQueue<K, _WeakHashMapEntry<K, V>> _queue =
+      WeakReferenceQueue();
 
   int _elementCount = 0;
   var _buckets = List<_WeakHashMapEntry<K, V>?>.filled(_INITIAL_CAPACITY, null);
@@ -283,31 +298,54 @@ class WeakHashMap<K extends Object, V> with MapMixin<K, V> {
 
   void _expungeStaleEntries() {
     if (_queue.isEmpty) return;
-    _WeakHashMapEntry<K, V> e;
-    while (_queue.isNotEmpty) {
-      final entryQ = _queue.removeFirst().target;
-      if (entryQ == null) continue;
-      e = entryQ;
-
+    // _WeakHashMapEntry<K, V> e;
+    // while (_queue.isNotEmpty) {
+    //   final entryQ = _queue.removeFirst().target;
+    //   if (entryQ == null) continue;
+    //   e = entryQ;
+    //
+    //   int index = e.hashCode & (_buckets.length - 1);
+    //   var entry = _buckets[index];
+    //   if (entry == null) continue;
+    //   if (entry == e) {
+    //     _buckets[index] = e.next;
+    //     _elementCount--;
+    //   } else {
+    //     _WeakHashMapEntry<K, V>? c;
+    //     while ((c = entry?.next) != null) {
+    //       if (c == e) {
+    //         entry?.next = e.remove();
+    //         _elementCount--;
+    //         break;
+    //       }
+    //       entry = c;
+    //     }
+    //   }
+    // }
+    final count = _elementCount;
+    _queue.expungeStale((e) {
       int index = e.hashCode & (_buckets.length - 1);
       var entry = _buckets[index];
-      if (entry == null) continue;
-      if (entry == e) {
-        _buckets[index] = e.next;
-        _elementCount--;
-      } else {
-        _WeakHashMapEntry<K, V>? c;
-        while ((c = entry?.next) != null) {
-          if (c == e) {
-            entry?.next = e.remove();
-            _elementCount--;
-            break;
+      if (entry != null) {
+        if (entry == e) {
+          _buckets[index] = e.next;
+          _elementCount--;
+        } else {
+          _WeakHashMapEntry<K, V>? c;
+          while ((c = entry?.next) != null) {
+            if (c == e) {
+              entry?.next = e.remove();
+              _elementCount--;
+              break;
+            }
+            entry = c;
           }
-          entry = c;
         }
       }
+    });
+    if (_elementCount != count) {
+      _modificationCount = (_modificationCount + 1) & _MODIFICATION_COUNT_MASK;
     }
-    _modificationCount = (_modificationCount + 1) & _MODIFICATION_COUNT_MASK;
   }
 
   // void __() {
@@ -534,8 +572,8 @@ class WeakHashMap<K extends Object, V> with MapMixin<K, V> {
 
   void _addEntry(List<_WeakHashMapEntry<K, V>?> buckets, int index, int length,
       K key, V value, int hashCode) {
-    final entry = _WeakHashMapEntry<K, V>(
-        key, value, hashCode, buckets[index], _finalizer);
+    final entry =
+        _WeakHashMapEntry<K, V>(key, value, hashCode, buckets[index], _queue);
     buckets[index] = entry;
     final newElements = _elementCount + 1;
     _elementCount = newElements;

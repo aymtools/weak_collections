@@ -10,18 +10,22 @@ class _WeakHashSetEntry<E extends Object> {
   final WeakReference<E> keyWeakRef;
   _WeakHashSetEntry<E>? next;
 
-  final Finalizer<WeakReference<_WeakHashSetEntry<E>>> finalizer;
+  WeakReferenceQueue<E, _WeakHashSetEntry<E>>? _queue;
+
+  E? get value => keyWeakRef.target;
 
   @override
   final int hashCode;
 
-  _WeakHashSetEntry(E key, this.hashCode, this.next, this.finalizer)
+  _WeakHashSetEntry(E key, this.hashCode, this.next, this._queue)
       : keyWeakRef = WeakReference(key) {
-    finalizer.attach(key, WeakReference(this), detach: keyWeakRef);
+    _queue?.attach(keyWeakRef, this,
+        finalizationCallback: _WeakHashSetEntry._finalize);
   }
 
   _WeakHashSetEntry<E>? remove() {
-    finalizer.detach(keyWeakRef);
+    _queue?.detach(keyWeakRef);
+    _queue = null;
 
     final result = next;
     next = null;
@@ -31,6 +35,10 @@ class _WeakHashSetEntry<E extends Object> {
   @override
   bool operator ==(Object other) {
     return identical(this, other);
+  }
+
+  static void _finalize(_WeakHashSetEntry entry) {
+    entry._queue = null;
   }
 }
 
@@ -93,13 +101,16 @@ class WeakHashSet<E extends Object> with SetMixin<E> {
 
   int _hashCode(Object? e) => e.hashCode;
 
-  final Queue<WeakReference<_WeakHashSetEntry<E>>> _queue = Queue();
-  late final Finalizer<WeakReference<_WeakHashSetEntry<E>>> _finalizer =
-      Finalizer((entry) {
-    if (entry.target != null) {
-      _queue.add(entry);
-    }
-  });
+  // final Queue<WeakReference<_WeakHashSetEntry<E>>> _queue = Queue();
+  // late final Finalizer<WeakReference<_WeakHashSetEntry<E>>> _finalizer =
+  //     Finalizer((entry) {
+  //   if (entry.target != null) {
+  //     _queue.add(entry);
+  //   }
+  // });
+
+  final WeakReferenceQueue<E, _WeakHashSetEntry<E>> _queue =
+      WeakReferenceQueue();
 
   WeakHashSet();
 
@@ -161,30 +172,52 @@ class WeakHashSet<E extends Object> with SetMixin<E> {
 
   void _expungeStaleEntries() {
     if (_queue.isEmpty) return;
-    _WeakHashSetEntry<E> e;
-    while (_queue.isNotEmpty) {
-      final entryQ = _queue.removeFirst().target;
-      if (entryQ == null) continue;
-      e = entryQ;
+    // _WeakHashSetEntry<E> e;
+    // while (_queue.isNotEmpty) {
+    //   final entryQ = _queue.removeFirst().target;
+    //   if (entryQ == null) continue;
+    //   e = entryQ;
+    //   int index = e.hashCode & (_buckets.length - 1);
+    //   var entry = _buckets[index];
+    //   if (entry == null) continue;
+    //   if (entry == e) {
+    //     _buckets[index] = e.next;
+    //     _elementCount--;
+    //   } else {
+    //     _WeakHashSetEntry<E>? c;
+    //     while ((c = entry?.next) != null) {
+    //       if (_equals(c, e)) {
+    //         entry?.next = e.remove();
+    //         _elementCount--;
+    //         break;
+    //       }
+    //       entry = c;
+    //     }
+    //   }
+    // }
+    final count = _elementCount;
+    _queue.expungeStale((e) {
       int index = e.hashCode & (_buckets.length - 1);
       var entry = _buckets[index];
-      if (entry == null) continue;
-      if (entry == e) {
-        _buckets[index] = e.next;
-        _elementCount--;
-      } else {
-        _WeakHashSetEntry<E>? c;
-        while ((c = entry?.next) != null) {
-          if (_equals(c, e)) {
-            entry?.next = e.remove();
-            _elementCount--;
-            break;
+      if (entry != null) {
+        if (entry == e) {
+          _buckets[index] = e.next;
+          _elementCount--;
+        } else {
+          _WeakHashSetEntry<E>? c;
+          while ((c = entry.next) != null) {
+            if (_equals(c, e)) {
+              entry.next = e.remove();
+              _elementCount--;
+              break;
+            }
           }
-          entry = c;
         }
       }
+    });
+    if (_elementCount != count) {
+      _modificationCount = (_modificationCount + 1) & _MODIFICATION_COUNT_MASK;
     }
-    _modificationCount = (_modificationCount + 1) & _MODIFICATION_COUNT_MASK;
   }
 
   @override
@@ -368,7 +401,7 @@ class WeakHashSet<E extends Object> with SetMixin<E> {
 
   void _addEntry(E key, int hashCode, int index) {
     _buckets[index] =
-        _WeakHashSetEntry<E>(key, hashCode, _buckets[index], _finalizer);
+        _WeakHashSetEntry<E>(key, hashCode, _buckets[index], _queue);
     int newElements = _elementCount + 1;
     _elementCount = newElements;
     int length = _buckets.length;

@@ -84,9 +84,9 @@ void _finalize(_WeakEntry entry) {
   entry._finalize();
 }
 
-class WeakReferenceQueue<E extends Object, T extends Object> {
-  final Finalizer<_WeakEntry<E>> _finalizer = Finalizer(_finalize);
+final Finalizer<_WeakEntry> _finalizer = Finalizer(_finalize);
 
+class WeakReferenceQueue<E extends Object, T extends Object> {
   Queue<_WeakEntry<E>> _queue;
   final Expando<_WeakEntry<E>> _tokens = Expando();
 
