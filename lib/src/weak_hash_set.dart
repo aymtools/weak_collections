@@ -491,7 +491,7 @@ class _CustomWeakHashSet<E extends Object> extends WeakHashSet<E> {
   @override
   bool containsAll(Iterable<Object?> elements) {
     for (Object? element in elements) {
-      if (!_validKey(element) || !this.contains(element)) return false;
+      if (!_validKey(element) || !contains(element)) return false;
     }
     return true;
   }

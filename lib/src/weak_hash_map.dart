@@ -12,6 +12,8 @@ class _WeakHashMapEntry<K extends Object, V> {
   final WeakReference<K> keyWeakRef;
   V? value;
 
+  K? get key => keyWeakRef.target;
+
   _WeakHashMapEntry<K, V>? next;
 
   // final Finalizer<WeakReference<_WeakHashMapEntry<K, V>>> finalizer;
@@ -973,7 +975,7 @@ class _CustomWeakHashMap<K extends Object, V> extends WeakHashMap<K, V> {
 
 @visibleForTesting
 extension WeakHashMapTestExt<K extends Object, V> on WeakHashMap<K, V> {
-  get __hashCode => () {
+  int Function(K) get __hashCode => () {
         return this is _IdentityWeakHashMap
             ? identityHashCode
             : this is _CustomWeakHashMap
@@ -981,7 +983,7 @@ extension WeakHashMapTestExt<K extends Object, V> on WeakHashMap<K, V> {
                 : defaultHashCode;
       }();
 
-  get __equals => () {
+  bool Function(K, K) get __equals => () {
         return this is _IdentityWeakHashMap
             ? identical
             : this is _CustomWeakHashMap
@@ -994,7 +996,8 @@ extension WeakHashMapTestExt<K extends Object, V> on WeakHashMap<K, V> {
     int index = __hashCode(key) & (_buckets.length - 1);
     var entry = _buckets[index];
     while (entry != null) {
-      if (__equals(key, entry.keyWeakRef.target)) return entry;
+      final k = entry.key;
+      if (k != null && __equals(key, k)) return entry;
       entry = entry.next;
     }
     return null;

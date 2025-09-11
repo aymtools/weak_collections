@@ -18,5 +18,5 @@ dependencies:
 
 dev_dependencies:
   test: ^1.25.14
-  lints: ^5.1.1
+  lints: any
   vm_service: ^15.0.2
