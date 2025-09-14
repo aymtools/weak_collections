@@ -1,3 +1,7 @@
+## 1.5.0
+
+* A unified weak-reference management utility for WeakHashMap and WeakHashSet.
+
 ## 1.4.0
 
 * WeakHashMap,WeakHashSet Add custom constructor for configurable isValidKey, hashCode and equals
