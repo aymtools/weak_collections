@@ -1005,4 +1005,13 @@ extension WeakHashMapTestExt<K extends Object, V> on WeakHashMap<K, V> {
 
   @visibleForTesting
   int getBucketLength() => _buckets.length;
+
+  @visibleForTesting
+  int getNotNullBucketLength() {
+    int count = 0;
+    for (var entry in _buckets) {
+      if (entry != null) count++;
+    }
+    return count;
+  }
 }

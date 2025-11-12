@@ -91,9 +91,12 @@ void afterGC(FutureOr<void> Function() action, {Object? check}) {
 }
 
 Future<void> tearDownWaitAllGC() async {
+  print('tearDownWaitAllGC _futures.length ${_futures.length}');
   while (_futures.isNotEmpty) {
     final fs = [..._futures];
     _futures.clear();
     await Future.wait(fs);
+    await Future.delayed(Duration.zero);
+    print('_futures.length ${_futures.length}');
   }
 }

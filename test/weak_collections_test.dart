@@ -94,6 +94,125 @@ void main() {
       // 删除强引用
       a = null;
     });
+
+    test('hash collision and GC', () async {
+      final map = WeakHashMap<TestAwayHashObject, String>();
+      TestAwayHashObject? a = TestAwayHashObject('a');
+      TestAwayHashObject? b = TestAwayHashObject('b');
+      TestAwayHashObject? c = TestAwayHashObject('c');
+      map[a] = 'a';
+      map[b] = 'b';
+      map[c] = 'c';
+      expect(map.containsKey(a), isTrue);
+      expect(map.containsKey(b), isTrue);
+      expect(map.containsKey(c), isTrue);
+      expect(map.containsValue('a'), isTrue);
+      expect(map.containsValue('b'), isTrue);
+      expect(map.containsValue('c'), isTrue);
+
+      final aWeak = WeakReference(a);
+      final bWeak = WeakReference(b);
+      final cWeak = WeakReference(c);
+      expect(aWeak.target, isNotNull);
+      expect(bWeak.target, isNotNull);
+      expect(cWeak.target, isNotNull);
+
+      final aEntry = WeakReference(map.getWeakEntry(a)!);
+      final bEntry = WeakReference(map.getWeakEntry(b)!);
+      final cEntry = WeakReference(map.getWeakEntry(c)!);
+
+      a = null;
+      b = null;
+      c = null;
+
+      afterGC(() {
+        expect(aWeak.target, isNull);
+        expect(bWeak.target, isNull);
+        expect(cWeak.target, isNull);
+
+        expect(map, isEmpty);
+
+        afterGC(() {
+          expect(aEntry.target, isNull);
+          expect(bEntry.target, isNull);
+          expect(cEntry.target, isNull);
+        });
+      });
+    });
+    test('hash collision with weak and GC', () async {
+      final map = WeakHashMap<TestAwayHashObject, String>();
+      TestAwayHashObject? a = TestAwayHashObject('a');
+      TestAwayHashObject? b = TestAwayHashObject('b');
+      TestAwayHashObject? c = TestAwayHashObject('c');
+      map[a] = 'a';
+      map[b] = 'b';
+      map[c] = 'c';
+      expect(map.containsKey(a), isTrue);
+      expect(map.containsKey(b), isTrue);
+      expect(map.containsKey(c), isTrue);
+      expect(map.containsValue('a'), isTrue);
+      expect(map.containsValue('b'), isTrue);
+      expect(map.containsValue('c'), isTrue);
+
+      final aWeak = WeakReference(a);
+      final bWeak = WeakReference(b);
+      final cWeak = WeakReference(c);
+      expect(aWeak.target, isNotNull);
+      expect(bWeak.target, isNotNull);
+      expect(cWeak.target, isNotNull);
+
+      final aEntry = WeakReference(map.getWeakEntry(a)!);
+      final bEntry = WeakReference(map.getWeakEntry(b)!);
+      final cEntry = WeakReference(map.getWeakEntry(c)!);
+
+      a = null;
+      objects.add(b);
+      objects.add(c);
+
+      afterGC(() {
+        expect(aWeak.target, isNull);
+        expect(bWeak.target, isNotNull);
+        expect(cWeak.target, isNotNull);
+
+        expect(map.length, 2);
+
+        afterGC(() {
+          expect(aEntry.target, isNull);
+          expect(bEntry.target, isNotNull);
+          expect(cEntry.target, isNotNull);
+          expect(map.length, 2);
+        });
+      });
+    });
+
+    test('.getNotNullBucketLength() with Rewrite hashcode', () {
+      final map = WeakHashMap<TestAwayHashObject, String>();
+      TestAwayHashObject? a = TestAwayHashObject('a');
+      TestAwayHashObject? b = TestAwayHashObject('b');
+      TestAwayHashObject? c = TestAwayHashObject('c');
+      TestAwayHashObject? c2 = TestAwayHashObject('c');
+      map[a] = 'a';
+      map[b] = 'b';
+      map[c] = 'c';
+
+      expect(map.length, equals(3));
+      expect(map.containsKey(a), isTrue);
+      expect(map.containsKey(b), isTrue);
+      expect(map.containsKey(c), isTrue);
+      expect(map.containsKey(c2), isTrue);
+
+      objects.add(b);
+      objects.add(c);
+      expect(map.getNotNullBucketLength(), 1);
+      afterGC(() {
+        expect(map.length, 2);
+        expect(map.getNotNullBucketLength(), 1);
+        afterGC(() {
+          expect(map.length, 2);
+          expect(map.getNotNullBucketLength(), 1);
+        });
+      });
+    });
   });
 
   group('WeakHashSet garbage collection', () {
@@ -164,6 +283,116 @@ void main() {
       });
       // 删除强引用
       a = null;
+    });
+
+    test('hash collision and GC', () async {
+      final set = WeakHashSet<TestAwayHashObject>();
+      TestAwayHashObject? a = TestAwayHashObject('a');
+      TestAwayHashObject? b = TestAwayHashObject('b');
+      TestAwayHashObject? c = TestAwayHashObject('c');
+      set.addAll([a, b, c]);
+      expect(set.contains(a), isTrue);
+      expect(set.contains(b), isTrue);
+      expect(set.contains(c), isTrue);
+
+      final aWeak = WeakReference(a);
+      final bWeak = WeakReference(b);
+      final cWeak = WeakReference(c);
+      expect(aWeak.target, isNotNull);
+      expect(bWeak.target, isNotNull);
+      expect(cWeak.target, isNotNull);
+
+      final aEntry = WeakReference(set.getWeakEntry(a)!);
+      final bEntry = WeakReference(set.getWeakEntry(b)!);
+      final cEntry = WeakReference(set.getWeakEntry(c)!);
+
+      a = null;
+      b = null;
+      c = null;
+
+      afterGC(() {
+        expect(aWeak.target, isNull);
+        expect(bWeak.target, isNull);
+        expect(cWeak.target, isNull);
+
+        expect(set, isEmpty);
+
+        afterGC(() {
+          expect(aEntry.target, isNull);
+          expect(bEntry.target, isNull);
+          expect(cEntry.target, isNull);
+        });
+      });
+    });
+
+    test('hash collision with weak and GC', () async {
+      final set = WeakHashSet<TestAwayHashObject>();
+      TestAwayHashObject? a = TestAwayHashObject('a');
+      TestAwayHashObject? b = TestAwayHashObject('b');
+      TestAwayHashObject? c = TestAwayHashObject('c');
+      set.addAll([a, b, c]);
+      expect(set.contains(a), isTrue);
+      expect(set.contains(b), isTrue);
+      expect(set.contains(c), isTrue);
+
+      final aWeak = WeakReference(a);
+      final bWeak = WeakReference(b);
+      final cWeak = WeakReference(c);
+      expect(aWeak.target, isNotNull);
+      expect(bWeak.target, isNotNull);
+      expect(cWeak.target, isNotNull);
+
+      final aEntry = WeakReference(set.getWeakEntry(a)!);
+      final bEntry = WeakReference(set.getWeakEntry(b)!);
+      final cEntry = WeakReference(set.getWeakEntry(c)!);
+
+      a = null;
+      objects.add(b);
+      objects.add(c);
+
+      afterGC(() {
+        expect(aWeak.target, isNull);
+        expect(bWeak.target, isNotNull);
+        expect(cWeak.target, isNotNull);
+
+        expect(set.length, 2);
+
+        afterGC(() {
+          expect(aEntry.target, isNull);
+          expect(bEntry.target, isNotNull);
+          expect(cEntry.target, isNotNull);
+          expect(set.length, 2);
+        });
+      });
+    });
+
+    test('.getNotNullBucketLength() with Rewrite hashcode', () {
+      final set = WeakHashSet<TestAwayHashObject>();
+
+      final a = TestAwayHashObject('a');
+      final b = TestAwayHashObject('b');
+      final c = TestAwayHashObject('c');
+      final c2 = TestAwayHashObject('c');
+
+      set.addAll([a, b, c]);
+
+      expect(set.length, equals(3));
+      expect(set.contains(a), isTrue);
+      expect(set.contains(b), isTrue);
+      expect(set.contains(c), isTrue);
+      expect(set.contains(c2), isTrue);
+
+      objects.add(b);
+      objects.add(c);
+      expect(set.getNotNullBucketLength(), 1);
+      afterGC(() {
+        expect(set.length, 2);
+        expect(set.getNotNullBucketLength(), 1);
+        afterGC(() {
+          expect(set.length, 2);
+          expect(set.getNotNullBucketLength(), 1);
+        });
+      });
     });
   });
 
