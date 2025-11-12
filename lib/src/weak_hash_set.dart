@@ -200,17 +200,18 @@ class WeakHashSet<E extends Object> with SetMixin<E> {
       int index = e.hashCode & (_buckets.length - 1);
       var entry = _buckets[index];
       if (entry != null) {
-        if (entry == e) {
+        if (identical(e, entry)) {
           _buckets[index] = e.next;
           _elementCount--;
         } else {
           _WeakHashSetEntry<E>? c;
-          while ((c = entry.next) != null) {
-            if (_equals(c, e)) {
-              entry.next = e.remove();
+          while ((c = entry?.next) != null) {
+            if (identical(c, e)) {
+              entry?.next = e.remove();
               _elementCount--;
               break;
             }
+            entry = c;
           }
         }
       }

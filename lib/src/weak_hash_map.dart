@@ -329,13 +329,13 @@ class WeakHashMap<K extends Object, V> with MapMixin<K, V> {
       int index = e.hashCode & (_buckets.length - 1);
       var entry = _buckets[index];
       if (entry != null) {
-        if (entry == e) {
+        if (identical(entry, e)) {
           _buckets[index] = e.next;
           _elementCount--;
         } else {
           _WeakHashMapEntry<K, V>? c;
           while ((c = entry?.next) != null) {
-            if (c == e) {
+            if (identical(c, e)) {
               entry?.next = e.remove();
               _elementCount--;
               break;

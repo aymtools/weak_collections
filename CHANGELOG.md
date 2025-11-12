@@ -1,3 +1,7 @@
+## 1.5.1
+
+* Use identical to compare entries when executing expungeStale.
+
 ## 1.5.0
 
 * A unified weak-reference management utility for WeakHashMap and WeakHashSet.
