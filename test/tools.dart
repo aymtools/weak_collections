@@ -15,7 +15,7 @@ int customHashCode(TestObject a) => a.id.hashCode;
 
 final _aHashCode = identityHashCode('a');
 
-Map<Object, int> _lastHashCode = {};
+Expando<int> _lastHashCode = Expando<int>();
 
 /// 依然会存在一个 1/(bucket.length) 的概率触发 桶碰撞，所以还是有概率 在桶中找到
 int customHashCodeNotAThenRandom(TestObject a) {
