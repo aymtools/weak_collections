@@ -1,3 +1,7 @@
+## 1.6.0
+
+* Added WeakLinkedHashMap and WeakLinkedHashSet.
+
 ## 1.5.1
 
 * Use identical to compare entries when executing expungeStale.

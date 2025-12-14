@@ -243,6 +243,8 @@ void main() {
       map[a] = 10;
       map[b] = 20;
 
+      expect(map.length, 2);
+
       expect(map.keys.toSet(), {a, b});
       expect(map.values.toSet(), {10, 20});
       expect(map.entries.length, 2);

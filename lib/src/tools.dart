@@ -139,6 +139,14 @@ class WeakReferenceQueue<E extends Object, T extends Object> {
   }
 }
 
+class WeakLinkedNode<E extends Object> {
+  final E value;
+  WeakLinkedNode<E>? next;
+  WeakLinkedNode<E>? prev;
+
+  WeakLinkedNode(this.value);
+}
+
 @visibleForTesting
 extension WeakReferenceQueueTestExt<E extends Object, T extends Object>
     on WeakReferenceQueue<E, T> {

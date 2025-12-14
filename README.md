@@ -4,6 +4,8 @@ This package contains the classes:
 
 * **WeakHashMap**
 * **WeakHashSet**
+* **WeakLinkedHashMap**
+* **WeakLinkedHashSet**
 * **WeakQueue**
 
 ## WeakHashMap

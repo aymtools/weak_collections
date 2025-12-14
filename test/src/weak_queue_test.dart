@@ -1,7 +1,7 @@
 import 'dart:collection';
 
 import 'package:test/test.dart';
-import 'package:weak_collections/src/weak_queue.dart';
+import 'package:weak_collections/weak_collections.dart';
 
 import '../tools.dart';
 
