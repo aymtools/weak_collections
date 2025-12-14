@@ -2,7 +2,7 @@ import 'dart:collection';
 
 import 'package:meta/meta.dart';
 
-class WeakQueue<T extends Object> with Iterable<T> implements Queue<T> {
+class WeakQueue<T extends Object> extends Iterable<T> implements Queue<T> {
   final Queue<_WeakRefEntry<T>> _refs = Queue<_WeakRefEntry<T>>();
 
   late final Finalizer<WeakReference<_WeakRefEntry<T>>> _finalizer =
@@ -200,7 +200,7 @@ class _WeakQueueIterator<T extends Object> extends Iterator<T> {
 }
 
 class _WeakQueueCastView<S extends Object, R>
-    with Iterable<R>
+    extends Iterable<R>
     implements Queue<R> {
   final WeakQueue<S> _source;
 
