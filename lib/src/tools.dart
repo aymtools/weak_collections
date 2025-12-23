@@ -12,85 +12,77 @@ bool defaultEquals(Object? a, Object? b) => a == b;
 
 int defaultHashCode(Object? o) => o.hashCode;
 
-final Finalizer<_FinalizationToken> _tokenFinalizer =
-    Finalizer((token) => token._finalizer = null);
+class _WeakEntry<E extends Object, T extends Object> {
+  Queue<_WeakEntry<E, T>>? _queue;
 
-class _FinalizationToken<T extends Object> {
+  Finalizer<_WeakEntry<E, T>>? _tokenFinalizer;
   WeakReference<T>? _token;
-  void Function(T)? _finalizer;
+
+  void Function(T)? _finalizationCallback;
 
   T? get token => _token?.target;
 
-  void Function(T)? get finalizer => _finalizer;
+  void Function(T)? get finalizationCallback => _finalizationCallback;
 
-  _FinalizationToken(T token, this._finalizer) : _token = WeakReference(token) {
-    _tokenFinalizer.attach(token, this, detach: _token);
+  _WeakEntry(
+      this._queue, this._tokenFinalizer, T token, this._finalizationCallback)
+      : _token = WeakReference(token) {
+    _tokenFinalizer?.attach(token, this, detach: _token);
   }
-
-  void _invokeFinalizer() {
-    var token = _token;
-    if (token != null) {
-      _tokenFinalizer.detach(token);
-      var t = token.target;
-      if (t != null) {
-        finalizer?.call(t);
-        t = null;
-      }
-      token = null;
-    }
-    _finalizer = null;
-  }
-
-  void _release() {
-    var token = _token;
-    if (token != null) {
-      _token = null;
-      _tokenFinalizer.detach(token);
-      token = null;
-    }
-    _finalizer = null;
-  }
-}
-
-class _WeakEntry<E extends Object> {
-  Queue<_WeakEntry<E>>? _queue;
-  _FinalizationToken? _finalizationToken;
-
-  _WeakEntry(this._queue, _FinalizationToken finalizationToken)
-      : _finalizationToken = finalizationToken;
 
   bool _finalize() {
-    var target = _finalizationToken;
-    if (target != null) {
-      if (target.token != null) {
+    bool r = false;
+    var tokenW = _token;
+    if (tokenW != null) {
+      _tokenFinalizer?.detach(tokenW);
+      final token = tokenW.target;
+      if (token != null) {
         _queue?.add(this);
+        finalizationCallback?.call(token);
+        r = true;
       }
-      target._invokeFinalizer();
-      target = null;
+      _tokenFinalizer = null;
+      _finalizationCallback = null;
       _queue = null;
-      return true;
     }
-    return false;
+    return r;
   }
 
   void _release() {
     _queue = null;
-    _finalizationToken?._release();
-    _finalizationToken = null;
+    final tokenW = _token;
+    if (tokenW != null) {
+      _token = null;
+      _tokenFinalizer?.detach(tokenW);
+    }
+    _tokenFinalizer = null;
+    _finalizationCallback = null;
   }
 }
 
-void _finalize(_WeakEntry entry) {
-  entry._finalize();
-}
-
-final Finalizer<_WeakEntry> _finalizer = Finalizer(_finalize);
-
 class WeakReferenceQueue<E extends Object, T extends Object> {
-  Queue<_WeakEntry<E>> _queue;
-  final Expando<_WeakEntry<E>> _tokens = Expando();
+  final Expando<_WeakEntry<E, T>> _tokens = Expando();
 
-  WeakReferenceQueue() : _queue = Queue();
+  Queue<_WeakEntry<E, T>> _queue;
+
+  Finalizer<_WeakEntry<E, T>> _entryFinalizer;
+
+  Finalizer<_WeakEntry<E, T>> _tokenFinalizer;
+
+  WeakReferenceQueue()
+      : _queue = Queue(),
+        _entryFinalizer = Finalizer(_finalizeEntry),
+        _tokenFinalizer = Finalizer(_finalizeToken);
+
+  static void _finalizeEntry(_WeakEntry entry) {
+    entry._finalize();
+  }
+
+  static void _finalizeToken(_WeakEntry entry) {
+    entry._token = null;
+    entry._finalizationCallback = null;
+    entry._tokenFinalizer = null;
+  }
 
   void attach(WeakReference<E> weakReference, T finalizationToken,
       {void Function(T)? finalizationCallback}) {
@@ -102,15 +94,15 @@ class WeakReferenceQueue<E extends Object, T extends Object> {
 
     final target = weakReference.target;
     if (target != null) {
-      final token = _WeakEntry(_queue,
-          _FinalizationToken<T>(finalizationToken, finalizationCallback));
+      final token = _WeakEntry<E, T>(
+          _queue, _tokenFinalizer, finalizationToken, finalizationCallback);
       _tokens[weakReference] = token;
-      _finalizer.attach(target, token, detach: weakReference);
+      _entryFinalizer.attach(target, token, detach: weakReference);
     }
   }
 
   void detach(WeakReference<E> weakReference) {
-    _finalizer.detach(weakReference);
+    _entryFinalizer.detach(weakReference);
     var entry = _tokens[weakReference];
     if (entry != null) {
       _tokens[weakReference] = null;
@@ -118,24 +110,27 @@ class WeakReferenceQueue<E extends Object, T extends Object> {
     }
   }
 
-  void clear() => _queue = Queue();
+  void clear() {
+    _queue = Queue();
+    _entryFinalizer = Finalizer(_finalizeEntry);
+    _tokenFinalizer = Finalizer(_finalizeToken);
+  }
 
   bool get isEmpty => _queue.isEmpty;
 
   bool get isNotEmpty => _queue.isNotEmpty;
 
   void expungeStale(void Function(T) visit) {
-    if (_queue.isEmpty) return;
     final queue = _queue;
-    do {
-      _WeakEntry<E>? target = queue.removeFirst();
-      var token = target._finalizationToken?.token;
+    while (queue.isNotEmpty) {
+      var target = queue.removeFirst();
+      var token = target.token;
       if (token != null) {
         visit(token as dynamic);
         token = null;
       }
       target._release();
-    } while (queue.isNotEmpty);
+    }
   }
 }
 
@@ -156,9 +151,9 @@ extension WeakReferenceQueueTestExt<E extends Object, T extends Object>
 
   @visibleForTesting
   Object? getFinalizationToken(WeakReference<E> weakReference) =>
-      _tokens[weakReference]?._finalizationToken?.token;
+      _tokens[weakReference]?.token;
 
   @visibleForTesting
   Object? getFinalizationCallback(WeakReference<E> weakReference) =>
-      _tokens[weakReference]?._finalizationToken?.finalizer;
+      _tokens[weakReference]?.finalizationCallback;
 }

@@ -199,8 +199,7 @@ class _WeakQueueIterator<T extends Object> extends Iterator<T> {
   }
 }
 
-class _WeakQueueCastView<S extends Object, R>
-    extends Iterable<R>
+class _WeakQueueCastView<S extends Object, R> extends Iterable<R>
     implements Queue<R> {
   final WeakQueue<S> _source;
 
