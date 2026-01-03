@@ -1,3 +1,7 @@
+## 1.6.1
+
+* Fix: WeakHashMap.custom remove did not return the removed value
+
 ## 1.6.0
 
 * Added WeakLinkedHashMap and WeakLinkedHashSet.

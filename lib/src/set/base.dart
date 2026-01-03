@@ -371,6 +371,7 @@ mixin _CustomWeakHashSetMixin<E extends Object> on WeakHashSetMixin<E> {
 
   @override
   void removeAll(Iterable<Object?> elements) {
+    _expungeStaleEntries();
     for (Object? element in elements) {
       if (_validKey(element)) {
         super._remove(element, _hashCode(element));

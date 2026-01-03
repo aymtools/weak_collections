@@ -521,11 +521,12 @@ mixin _IdentityWeakHashMapMixin<K extends Object, V> on WeakHashMapMixin<K, V> {
       final next = entry.next;
       if (hashCode == entry.hashCode &&
           identical(entry.keyWeakRef.target, key)) {
+        final value = entry.value;
         _removeEntry(entry, previous, index);
         _elementCount--;
         _modificationCount =
             (_modificationCount + 1) & _MODIFICATION_COUNT_MASK;
-        return entry.value;
+        return value;
       }
       previous = entry;
       entry = next;
@@ -686,11 +687,12 @@ mixin _CustomWeakHashMapMixin<K extends Object, V> on WeakHashMapMixin<K, V> {
       if (hashCode == entry.hashCode) {
         final k = entry.keyWeakRef.target;
         if (k != null && _equals(k, key)) {
+          final value = entry.value;
           _removeEntry(entry, previous, index);
           _elementCount--;
           _modificationCount =
               (_modificationCount + 1) & _MODIFICATION_COUNT_MASK;
-          return entry.value;
+          return value;
         }
       }
       previous = entry;
