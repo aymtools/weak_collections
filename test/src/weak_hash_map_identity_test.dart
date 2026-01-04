@@ -120,7 +120,9 @@ void main() {
       map[b] = 'b';
       map[c] = 'c';
 
-      map.remove(b);
+      final v = map.remove(b);
+
+      expect(v, 'b');
 
       expect(map.runtimeType, isNot(equals(WeakHashMap<TestObject, String>)),
           reason: 'sub class');

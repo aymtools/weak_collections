@@ -1,22 +1,197 @@
 # .github/workflows/publish.yml
+# 预发布 vX.Y.Z-(pre/dev/beta/rc).X 只检查不发布
+# 正式发布 vX.Y.Z 会执行所有检查并使用OIDC的方式发布
 name: Publish to pub.dev
 
 on:
   push:
     tags:
-      # must align with the tag-pattern configured on pub.dev, often just replace
-      # {{version}} with [0-9]+.[0-9]+.[0-9]+
-      - 'v[0-9]+.[0-9]+.[0-9]+' # tag-pattern on pub.dev: 'v{{version}}'
-    # If you prefer tags like '1.2.3', without the 'v' prefix, then use:
-    # - '[0-9]+.[0-9]+.[0-9]+' # tag-pattern on pub.dev: '{{version}}'
-    # If your repository contains multiple packages consider a pattern like:
-    # - 'my_package_name-v[0-9]+.[0-9]+.[0-9]+'
+      - 'v*.*.*'
+      - 'v*.*.*-*.*'
 
-# Publish using the reusable workflow from dart-lang.
 jobs:
-  publish:
+  package:
+    runs-on: ubuntu-latest
+
     permissions:
-      id-token: write # Required for authentication using OIDC
-    uses: dart-lang/setup-dart/.github/workflows/publish.yml@v1
-    # with:
-    #   working-directory: path/to/package/within/repository
+      id-token: write
+      contents: read
+
+    steps:
+      # ---------------------------------
+      #  Checkout
+      # ---------------------------------
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # ---------------------------------
+      #  Install yq
+      # ---------------------------------
+      - name: Install yq
+        run: sudo snap install yq
+      # ---------------------------------
+      #  Parse tag & auto detect package
+      # ---------------------------------
+      - name: Parse tag
+        id: tag
+        run: |
+          TAG="${{ github.ref_name }}"
+
+          # single repo: vX.Y.Z
+          if [[ "$TAG" =~ ^v([0-9]+\.[0-9]+\.[0-9]+.*)$ ]]; then
+            VERSION="${BASH_REMATCH[1]}"
+          else
+            echo "::error::Invalid tag format: $TAG"
+            exit 1
+          fi
+
+          if [[ "$VERSION" =~ - ]]; then
+            RELEASE=false
+          else
+            RELEASE=true
+          fi
+          
+          if [ "$RELEASE" == "false" ]; then
+            REGEX='^v[0-9]+\.[0-9]+\.[0-9]+-(pre|dev|beta|rc)\.[0-9]+$'
+            if [[ ! "$TAG" =~ $REGEX ]]; then
+              echo "::error::Invalid tag: $TAG"
+              exit 1
+            fi
+          fi
+          
+          
+          if [ ! -f "pubspec.yaml" ]; then
+            echo "::error::pubspec.yaml not found "
+            exit 1
+          fi
+
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "release=$RELEASE" >> $GITHUB_OUTPUT
+
+          echo "🏷 Version : $VERSION"
+          echo "🚀 Release : $RELEASE"
+
+      # ---------------------------------
+      #  校验 pubspec ↔ tag
+      # ---------------------------------
+      - name: Validate pubspec version
+        run: |
+          PUBSPEC_VERSION=$(yq '.version' pubspec.yaml)
+          if [ "$PUBSPEC_VERSION" != "${{ steps.tag.outputs.version }}" ]; then
+            echo "::error::Tag version does not match pubspec.yaml"
+            exit 1
+          fi
+
+      # ---------------------------------
+      #  Extract minimum SDK
+      # ---------------------------------
+      - name: Extract minimum SDK
+        id: min_sdk
+        run: |
+          CONSTRAINT=$(yq '.environment.sdk' pubspec.yaml)
+
+          if [ -z "$CONSTRAINT" ] || [ "$CONSTRAINT" = "null" ]; then
+            echo "::error::Missing environment constraint"
+            exit 1
+          fi
+
+          MIN=$(echo "$CONSTRAINT" | sed -E 's/.*>=([0-9]+\.[0-9]+\.[0-9]+).*/\1/')
+          echo "version=$MIN" >> $GITHUB_OUTPUT
+          echo "🔽 Minimum Dart SDK: $MIN"
+
+      # ---------------------------------
+      #  Setup command aliases
+      # ---------------------------------
+      - name: Setup commands
+        id: cmds
+        run: |
+          echo "pub=dart pub" >> $GITHUB_OUTPUT
+          echo "analyze=dart analyze" >> $GITHUB_OUTPUT
+          echo "test=dart test --enable-vm-service -p vm " >> $GITHUB_OUTPUT
+          echo "format=dart format --output=none --set-exit-if-changed lib" >> $GITHUB_OUTPUT
+
+      # =====================================================================
+      #  Setup minimum Dart SDK
+      # =====================================================================
+      - name: Setup minimum Dart SDK
+        uses: dart-lang/setup-dart@v1
+        with:
+          sdk: ${{ steps.min_sdk.outputs.version }}
+
+      # =====================================================================
+      #  Minimum SDK analyze
+      # =====================================================================
+      - name: Analyze (minimum SDK)
+        run: |
+          ${{ steps.cmds.outputs.pub }} get
+          ${{ steps.cmds.outputs.analyze }} --fatal-infos --fatal-warnings  lib 
+          ${{ steps.cmds.outputs.analyze }}
+
+      # =====================================================================
+      #  Clear Minimum SDK
+      # =====================================================================
+      - name: Clean lock file and SDK cache
+        run: |
+          rm -f pubspec.lock
+          rm -rf .dart_tool
+          rm -f /home/runner/work/_temp/dartsdk-linux-x64-release.zip
+
+      # =====================================================================
+      #  Setup stable Dart SDK
+      # =====================================================================
+      - name: Setup stable Dart SDK
+        uses: dart-lang/setup-dart@v1
+
+      # =====================================================================
+      #  Stable SDK analyze
+      # =====================================================================
+      - name: Analyze (stable SDK)
+        run: |
+          ${{ steps.cmds.outputs.pub }} get
+          ${{ steps.cmds.outputs.analyze }} --fatal-infos --fatal-warnings  lib
+          ${{ steps.cmds.outputs.analyze }}
+
+      # =====================================================================
+      #  Format check (stable)
+      # =====================================================================
+      - name: Dart format check
+        run: ${{ steps.cmds.outputs.format }}
+
+      # ---------------------------------
+      #  Test (stable)
+      # ---------------------------------
+      - name: Run tests
+        run: ${{ steps.cmds.outputs.test }}
+
+      # ---------------------------------
+      #  CHANGELOG 校验 版本号（仅 release）
+      # ---------------------------------
+      - name: Validate CHANGELOG
+        if: steps.tag.outputs.release == 'true'
+        run: |
+
+          if [ ! -f CHANGELOG.md ]; then
+            echo "::error::CHANGELOG.md not found"
+            exit 1
+          fi
+
+          if ! grep -q "^## ${{ steps.tag.outputs.version }}" CHANGELOG.md; then
+            echo "::error::CHANGELOG.md missing version ${{ steps.tag.outputs.version }}"
+            exit 1
+          fi
+
+      # ---------------------------------
+      #  Publish (release only)
+      # ---------------------------------
+      - name: Authenticate with pub.dev
+        if: steps.tag.outputs.release == 'true'
+        run: dart pub token add https://pub.dev --oidc
+
+      - name: Publish dry-run
+        if: steps.tag.outputs.release == 'true'
+        run: ${{ steps.cmds.outputs.pub }} publish --dry-run
+
+      - name: Publish
+        if: steps.tag.outputs.release == 'true'
+        run: ${{ steps.cmds.outputs.pub }} publish

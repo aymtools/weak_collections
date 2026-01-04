@@ -229,7 +229,9 @@ void main() {
       map[a] = 'a';
       map[b] = 'b';
       map[c] = 'c';
-      map.remove(b);
+
+      final v = map.remove(b);
+      expect(v, isNull, reason: 'hash does not exist');
 
       expect(map.runtimeType, isNot(equals(WeakHashMap<TestObject, String>)),
           reason: 'sub class');
@@ -250,7 +252,8 @@ void main() {
       map[a] = 'a';
       map[b] = 'b';
       map[c] = 'c';
-      map.remove(c2);
+      final v = map.remove(c2);
+      expect(v, 'c', reason: 'customEquals');
       expect(map.runtimeType, isNot(equals(WeakHashMap<TestObject, String>)),
           reason: 'sub class');
       expect(map.length, equals(2));
@@ -271,7 +274,8 @@ void main() {
       map[a] = 'a';
       map[b] = 'b';
       map[c] = 'c';
-      map.remove(c);
+      final v = map.remove(c);
+      expect(v, isNull, reason: 'c isValidKey returns false。');
 
       expect(map.runtimeType, isNot(equals(WeakHashMap<TestObject, String>)),
           reason: 'sub class');
@@ -283,7 +287,8 @@ void main() {
       expect(map.containsValue('c'), isTrue);
       expect(map.containsKey(nonExisting), isFalse);
 
-      map.remove(b);
+      final v2 = map.remove(b);
+      expect(v2, 'b');
       expect(map.length, equals(2));
       expect(map.containsKey(b), isFalse, reason: 'removed');
       expect(map.containsValue('b'), isFalse);
@@ -305,7 +310,8 @@ void main() {
       map[b] = 'b';
       map[c] = 'c';
 
-      map.remove(c);
+      final v = map.remove(c);
+      expect(v, isNull, reason: 'c isValidKey returns false。');
       expect(map.runtimeType, isNot(equals(WeakHashMap<TestObject, String>)),
           reason: 'sub class');
       expect(map.length, equals(3));
@@ -316,12 +322,14 @@ void main() {
       expect(map.containsValue('c'), isTrue);
       expect(map.containsKey(nonExisting), isFalse);
 
-      map.remove(a);
+      final v2 = map.remove(a);
+      expect(v2, 'a');
       expect(map.length, equals(2));
       expect(map.containsKey(a), isFalse, reason: 'removed');
       expect(map.containsValue('a'), isFalse);
 
-      map.remove(b2);
+      final v3 = map.remove(b2);
+      expect(v3, 'b');
       expect(map.length, equals(1));
       expect(map.containsKey(b), isFalse, reason: 'removed');
       expect(map.containsValue('b'), isFalse);
@@ -399,7 +407,8 @@ void main() {
       expect(map.length, equals(3));
       expect(map.containsKey(a), isTrue);
       expect(map.containsKey(b), isTrue);
-      expect(map.containsKey(c), isFalse,reason: 'c isValidKey returns false。');
+      expect(map.containsKey(c), isFalse,
+          reason: 'c isValidKey returns false。');
       expect(map.containsKey(b2), isTrue);
       expect(map.containsValue('a'), isTrue);
       expect(map.containsValue('b'), isTrue);
