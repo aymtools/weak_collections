@@ -70,10 +70,12 @@ class _WeakLinkedHashMapValueIterator<K extends Object, V>
 
 abstract class _WeakLinkedHashMapIterable<K extends Object, V, E>
     extends _WeakHashMapIterable<K, V, E> {
-  _WeakLinkedHashMapIterable(WeakLinkedHashMap<K, V> super._map);
+  final WeakLinkedHashMap<K, V> _linkedHashMap;
+
+  _WeakLinkedHashMapIterable(this._linkedHashMap) : super(_linkedHashMap);
 
   @override
-  WeakLinkedHashMap<K, V> get _map => super._map as WeakLinkedHashMap<K, V>;
+  WeakLinkedHashMap<K, V> get _map => _linkedHashMap;
 }
 
 class _WeakLinkedHashMapKeyIterable<K extends Object, V>
