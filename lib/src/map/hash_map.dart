@@ -27,7 +27,7 @@ abstract class _WeakHashMapIterator<K extends Object, V, E>
     _currKey = null;
     var entry = _entry?.next;
     while (entry != null) {
-      K? key = entry.keyWeakRef.target;
+      K? key = entry.key;
       if (key != null) {
         _currKey = key; // 引用一下阻止回收
         _entry = entry;
@@ -42,7 +42,7 @@ abstract class _WeakHashMapIterator<K extends Object, V, E>
       entry = buckets[i];
       _index = i + 1;
       while (entry != null) {
-        K? key = entry.keyWeakRef.target;
+        K? key = entry.key;
         if (key != null) {
           _currKey = key; // 引用一下阻止回收
           _entry = entry;

@@ -5,6 +5,7 @@ import 'package:weak_collections/src/tools.dart';
 
 part 'base.dart';
 part 'linked_hash_set.dart';
+part 'mixed.dart';
 
 class _WeakHashSetIterator<E extends Object> implements Iterator<E> {
   final WeakHashSet<E> _set;
@@ -24,7 +25,7 @@ class _WeakHashSetIterator<E extends Object> implements Iterator<E> {
     _current = null;
     var localNext = _next;
     while (localNext != null) {
-      var key = localNext.keyWeakRef.target;
+      var key = localNext.value;
       if (key != null) {
         _current = key;
         _next = localNext.next;
@@ -37,7 +38,7 @@ class _WeakHashSetIterator<E extends Object> implements Iterator<E> {
       localNext = buckets[_index];
       _index = _index + 1;
       while (localNext != null) {
-        var key = localNext.keyWeakRef.target;
+        var key = localNext.value;
         if (key != null) {
           _current = key;
           _next = localNext.next;

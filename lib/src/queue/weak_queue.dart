@@ -56,7 +56,7 @@ class WeakQueue<T extends Object> extends Iterable<T> implements Queue<T> {
     _expungeStaleEntries();
     while (_refs.isNotEmpty) {
       final ref = _refs.removeFirst();
-      final target = ref._value.target;
+      final target = ref.value;
       if (!ref._isCollected && target != null) {
         ref.remove();
         return target;
@@ -70,7 +70,7 @@ class WeakQueue<T extends Object> extends Iterable<T> implements Queue<T> {
     _expungeStaleEntries();
     while (_refs.isNotEmpty) {
       final ref = _refs.removeLast();
-      final target = ref._value.target;
+      final target = ref.value;
       if (!ref._isCollected && target != null) {
         ref.remove();
         return target;
@@ -103,14 +103,14 @@ class WeakQueue<T extends Object> extends Iterable<T> implements Queue<T> {
   }
 
   void _expungeStaleEntries() {
-    _refs.removeWhere((ref) => ref._isCollected || ref._value.target == null);
+    _refs.removeWhere((ref) => ref._isCollected || ref.value == null);
   }
 
   @override
   bool remove(Object? value) {
     _expungeStaleEntries();
     for (final ref in _refs) {
-      if (!ref._isCollected && ref._value.target == value) {
+      if (!ref._isCollected && ref.value == value) {
         ref.remove();
         _refs.remove(ref);
         return true;
@@ -125,7 +125,7 @@ class WeakQueue<T extends Object> extends Iterable<T> implements Queue<T> {
     final toRemove = <_WeakRefEntry<T>>[];
 
     for (final ref in _refs) {
-      final target = ref._value.target;
+      final target = ref.value;
       if (!ref._isCollected && target != null && test(target)) {
         toRemove.add(ref);
       }
@@ -142,7 +142,7 @@ class WeakQueue<T extends Object> extends Iterable<T> implements Queue<T> {
     _expungeStaleEntries();
     final toRemove = <_WeakRefEntry<T>>[];
     for (final ref in _refs) {
-      final target = ref._value.target;
+      final target = ref.value;
       if (!ref._isCollected && target != null && !test(target)) {
         toRemove.add(ref);
       }
@@ -188,7 +188,7 @@ class _WeakQueueIterator<T extends Object> extends Iterator<T> {
   bool moveNext() {
     while (_refIterator.moveNext()) {
       final ref = _refIterator.current;
-      final target = ref._value.target;
+      final target = ref.value;
       if (!ref._isCollected && target != null) {
         _current = target;
         return true;

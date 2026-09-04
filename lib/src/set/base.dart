@@ -4,24 +4,24 @@ part of 'hash_set.dart';
 const int _MODIFICATION_COUNT_MASK = 0x3fffffff;
 
 class _WeakHashSetEntry<E extends Object> {
-  final WeakReference<E> keyWeakRef;
+  final WeakReference<E> _keyWeakRef;
   _WeakHashSetEntry<E>? next;
 
   WeakReferenceQueue<E, _WeakHashSetEntry<E>>? _queue;
 
-  E? get value => keyWeakRef.target;
+  E? get value => _keyWeakRef.target;
 
   @override
   final int hashCode;
 
   _WeakHashSetEntry(E key, this.hashCode, this.next, this._queue)
-      : keyWeakRef = WeakReference(key) {
-    _queue?.attach(keyWeakRef, this,
+      : _keyWeakRef = WeakReference(key) {
+    _queue?.attach(_keyWeakRef, this,
         finalizationCallback: _WeakHashSetEntry._finalize);
   }
 
   _WeakHashSetEntry<E>? remove() {
-    _queue?.detach(keyWeakRef);
+    _queue?.detach(_keyWeakRef);
     _queue = null;
 
     final result = next;
@@ -96,7 +96,7 @@ mixin WeakHashSetMixin<E extends Object> on SetMixin<E> {
     int index = _hashCode(element) & (_buckets.length - 1);
     var entry = _buckets[index];
     while (entry != null) {
-      if (_equals(entry.keyWeakRef.target, element)) return true;
+      if (_equals(entry.value, element)) return true;
       entry = entry.next;
     }
     return false;
@@ -108,7 +108,7 @@ mixin WeakHashSetMixin<E extends Object> on SetMixin<E> {
     int index = _hashCode(element) & (_buckets.length - 1);
     var entry = _buckets[index];
     while (entry != null) {
-      var key = entry.keyWeakRef.target;
+      var key = entry.value;
       if (_equals(key, element)) return key;
       entry = entry.next;
     }
@@ -120,7 +120,7 @@ mixin WeakHashSetMixin<E extends Object> on SetMixin<E> {
     for (int i = 0; i < _buckets.length; i++) {
       var entry = _buckets[i];
       while (entry != null) {
-        var key = entry.keyWeakRef.target;
+        var key = entry.value;
         if (key != null) return key;
         entry = entry.next;
       }
@@ -134,8 +134,8 @@ mixin WeakHashSetMixin<E extends Object> on SetMixin<E> {
     for (int i = _buckets.length - 1; i >= 0; i--) {
       var entry = _buckets[i];
       while (entry != null) {
-        if (entry.keyWeakRef.target != null) {
-          e = entry.keyWeakRef.target;
+        if (entry.value != null) {
+          e = entry.value;
         }
         entry = entry.next;
       }
@@ -150,10 +150,10 @@ mixin WeakHashSetMixin<E extends Object> on SetMixin<E> {
     final index = hashCode & (_buckets.length - 1);
     var entry = _buckets[index];
     while (entry != null) {
-      if (_equals(entry.keyWeakRef.target, value)) return false;
+      if (_equals(entry.value, value)) return false;
       entry = entry.next;
     }
-    _addEntry(value, hashCode, index);
+    _addEntry(index, _makeEntry(value, hashCode, _buckets[index], _queue));
     return true;
   }
 
@@ -176,7 +176,7 @@ mixin WeakHashSetMixin<E extends Object> on SetMixin<E> {
     var entry = _buckets[index];
     _WeakHashSetEntry<E>? previous;
     while (entry != null) {
-      if (_equals(entry.keyWeakRef.target, object)) {
+      if (_equals(entry.value, object)) {
         _removeEntry(entry, previous, index);
         _elementCount--;
         _modificationCount =
@@ -215,7 +215,7 @@ mixin WeakHashSetMixin<E extends Object> on SetMixin<E> {
       var entry = _buckets[index];
       _WeakHashSetEntry<E>? previous;
       while (entry != null) {
-        E? target = entry.keyWeakRef.target;
+        E? target = entry.value;
         if (target == null) {
           previous = entry;
           entry = entry.next;
@@ -279,8 +279,8 @@ mixin WeakHashSetMixin<E extends Object> on SetMixin<E> {
           WeakReferenceQueue<E, _WeakHashSetEntry<E>> queue) =>
       _WeakHashSetEntry<E>(value, hashCode, next, queue);
 
-  void _addEntry(E key, int hashCode, int index) {
-    _buckets[index] = _makeEntry(key, hashCode, _buckets[index], _queue);
+  void _addEntry(int index, _WeakHashSetEntry<E> entry) {
+    _buckets[index] = entry;
     int newElements = _elementCount + 1;
     _elementCount = newElements;
     int length = _buckets.length;
@@ -317,7 +317,7 @@ mixin WeakHashSetMixin<E extends Object> on SetMixin<E> {
     for (int i = 0; i < _buckets.length; i++) {
       var entry = _buckets[i];
       while (entry != null) {
-        var temp = entry.keyWeakRef.target;
+        var temp = entry.value;
         if (temp != null) {
           result.add(temp);
         }
@@ -393,7 +393,7 @@ extension WeakHashSetTestExt<E extends Object> on WeakHashSet<E> {
     int index = _hashCode(value) & (_buckets.length - 1);
     var entry = _buckets[index];
     while (entry != null) {
-      if (_equals(value, entry.keyWeakRef.target)) return entry;
+      if (_equals(value, entry.value)) return entry;
       entry = entry.next;
     }
     return null;

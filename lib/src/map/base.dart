@@ -4,10 +4,10 @@ part of 'hash_map.dart';
 const int _MODIFICATION_COUNT_MASK = 0x3fffffff;
 
 class _WeakHashMapEntry<K extends Object, V> {
-  final WeakReference<K> keyWeakRef;
+  final WeakReference<K> _keyWeakRef;
   V? value;
 
-  K? get key => keyWeakRef.target;
+  K? get key => _keyWeakRef.target;
 
   _WeakHashMapEntry<K, V>? next;
 
@@ -24,13 +24,13 @@ class _WeakHashMapEntry<K extends Object, V> {
     this.hashCode,
     this.next,
     this._queue,
-  ) : keyWeakRef = WeakReference(key) {
-    _queue?.attach(keyWeakRef, this,
+  ) : _keyWeakRef = WeakReference(key) {
+    _queue?.attach(_keyWeakRef, this,
         finalizationCallback: _WeakHashMapEntry._finalize);
   }
 
   _WeakHashMapEntry<K, V>? remove() {
-    _queue?.detach(keyWeakRef);
+    _queue?.detach(_keyWeakRef);
     _queue = null;
     value = null;
 
@@ -112,7 +112,7 @@ mixin WeakHashMapMixin<K extends Object, V> on MapMixin<K, V> {
     final index = hashCode & (buckets.length - 1);
     var entry = buckets[index];
     while (entry != null) {
-      if (hashCode == entry.hashCode && entry.keyWeakRef.target == key) {
+      if (hashCode == entry.hashCode && entry.key == key) {
         return true;
       }
       entry = entry.next;
@@ -127,7 +127,7 @@ mixin WeakHashMapMixin<K extends Object, V> on MapMixin<K, V> {
     for (int i = 0; i < length; i++) {
       var entry = buckets[i];
       while (entry != null) {
-        if (entry.keyWeakRef.target != null && entry.value == value) {
+        if (entry.key != null && entry.value == value) {
           return true;
         }
         entry = entry.next;
@@ -143,7 +143,7 @@ mixin WeakHashMapMixin<K extends Object, V> on MapMixin<K, V> {
     final index = hashCode & (length - 1);
     var entry = buckets[index];
     while (entry != null) {
-      if (hashCode == entry.hashCode && entry.keyWeakRef.target == key) {
+      if (hashCode == entry.hashCode && entry.key == key) {
         entry.value = value;
         return;
       }
@@ -161,7 +161,7 @@ mixin WeakHashMapMixin<K extends Object, V> on MapMixin<K, V> {
     final index = hashCode & (buckets.length - 1);
     var entry = buckets[index];
     while (entry != null) {
-      if (hashCode == entry.hashCode && entry.keyWeakRef.target == key) {
+      if (hashCode == entry.hashCode && entry.key == key) {
         return entry.value;
       }
       entry = entry.next;
@@ -188,7 +188,7 @@ mixin WeakHashMapMixin<K extends Object, V> on MapMixin<K, V> {
     final index = hashCode & (length - 1);
     var entry = buckets[index];
     while (entry != null) {
-      if (hashCode == entry.hashCode && entry.keyWeakRef.target == key) {
+      if (hashCode == entry.hashCode && entry.key == key) {
         return entry.value!;
       }
       entry = entry.next;
@@ -226,7 +226,7 @@ mixin WeakHashMapMixin<K extends Object, V> on MapMixin<K, V> {
     for (int i = 0; i < length; i++) {
       var entry = buckets[i];
       while (entry != null) {
-        K? k = entry.keyWeakRef.target;
+        K? k = entry.key;
         if (k == null) {
           entry = entry.next;
           continue;
@@ -249,7 +249,7 @@ mixin WeakHashMapMixin<K extends Object, V> on MapMixin<K, V> {
     _WeakHashMapEntry<K, V>? previous;
     while (entry != null) {
       final next = entry.next;
-      if (hashCode == entry.hashCode && entry.keyWeakRef.target == key) {
+      if (hashCode == entry.hashCode && entry.key == key) {
         final value = entry.value;
         _removeEntry(entry, previous, index);
         _elementCount--;
@@ -348,7 +348,7 @@ mixin WeakHashMapMixin<K extends Object, V> on MapMixin<K, V> {
     final index = hashCode & (length - 1);
     var entry = buckets[index];
     while (entry != null) {
-      if (hashCode == entry.hashCode && entry.keyWeakRef.target == key) {
+      if (hashCode == entry.hashCode && entry.key == key) {
         return entry.value = update(entry.value as V);
       }
       entry = entry.next;
@@ -371,7 +371,7 @@ mixin WeakHashMapMixin<K extends Object, V> on MapMixin<K, V> {
     for (int i = 0; i < length; i++) {
       var entry = buckets[i];
       while (entry != null) {
-        K? k = entry.keyWeakRef.target;
+        K? k = entry.key;
         if (k == null) {
           entry = entry.next;
           continue;
@@ -400,7 +400,7 @@ mixin _IdentityWeakHashMapMixin<K extends Object, V> on WeakHashMapMixin<K, V> {
     var entry = buckets[index];
     while (entry != null) {
       if (hashCode == entry.hashCode &&
-          identical(entry.keyWeakRef.target, key)) {
+          identical(entry.key, key)) {
         return true;
       }
       entry = entry.next;
@@ -418,7 +418,7 @@ mixin _IdentityWeakHashMapMixin<K extends Object, V> on WeakHashMapMixin<K, V> {
     var entry = buckets[index];
     while (entry != null) {
       if (hashCode == entry.hashCode &&
-          identical(entry.keyWeakRef.target, key)) {
+          identical(entry.key, key)) {
         return entry.value;
       }
       entry = entry.next;
@@ -446,7 +446,7 @@ mixin _IdentityWeakHashMapMixin<K extends Object, V> on WeakHashMapMixin<K, V> {
     var entry = buckets[index];
     while (entry != null) {
       if (hashCode == entry.hashCode &&
-          identical(entry.keyWeakRef.target, key)) {
+          identical(entry.key, key)) {
         return entry.value!;
       }
       entry = entry.next;
@@ -477,7 +477,7 @@ mixin _IdentityWeakHashMapMixin<K extends Object, V> on WeakHashMapMixin<K, V> {
     var entry = buckets[index];
     while (entry != null) {
       if (hashCode == entry.hashCode &&
-          identical(entry.keyWeakRef.target, key)) {
+          identical(entry.key, key)) {
         return entry.value = update(entry.value as V);
       }
       entry = entry.next;
@@ -500,7 +500,7 @@ mixin _IdentityWeakHashMapMixin<K extends Object, V> on WeakHashMapMixin<K, V> {
     var entry = buckets[index];
     while (entry != null) {
       if (hashCode == entry.hashCode &&
-          identical(entry.keyWeakRef.target, key)) {
+          identical(entry.key, key)) {
         entry.value = value;
         return;
       }
@@ -520,7 +520,7 @@ mixin _IdentityWeakHashMapMixin<K extends Object, V> on WeakHashMapMixin<K, V> {
     while (entry != null) {
       final next = entry.next;
       if (hashCode == entry.hashCode &&
-          identical(entry.keyWeakRef.target, key)) {
+          identical(entry.key, key)) {
         final value = entry.value;
         _removeEntry(entry, previous, index);
         _elementCount--;
@@ -552,7 +552,7 @@ mixin _CustomWeakHashMapMixin<K extends Object, V> on WeakHashMapMixin<K, V> {
     var entry = buckets[index];
     while (entry != null) {
       if (hashCode == entry.hashCode) {
-        final k = entry.keyWeakRef.target;
+        final k = entry.key;
         if (k != null && _equals(k, lkey)) {
           return true;
         }
@@ -573,7 +573,7 @@ mixin _CustomWeakHashMapMixin<K extends Object, V> on WeakHashMapMixin<K, V> {
     var entry = buckets[index];
     while (entry != null) {
       if (hashCode == entry.hashCode) {
-        final k = entry.keyWeakRef.target;
+        final k = entry.key;
         if (k != null && _equals(k, lkey)) {
           return entry.value;
         }
@@ -603,7 +603,7 @@ mixin _CustomWeakHashMapMixin<K extends Object, V> on WeakHashMapMixin<K, V> {
     var entry = buckets[index];
     while (entry != null) {
       if (hashCode == entry.hashCode) {
-        final k = entry.keyWeakRef.target;
+        final k = entry.key;
         if (k != null && _equals(k, key)) {
           return entry.value as V;
         }
@@ -637,7 +637,7 @@ mixin _CustomWeakHashMapMixin<K extends Object, V> on WeakHashMapMixin<K, V> {
     var entry = buckets[index];
     while (entry != null) {
       if (hashCode == entry.hashCode) {
-        final k = entry.keyWeakRef.target;
+        final k = entry.key;
         if (k != null && _equals(k, key)) {
           return entry.value = update(entry.value as V);
         }
@@ -662,7 +662,7 @@ mixin _CustomWeakHashMapMixin<K extends Object, V> on WeakHashMapMixin<K, V> {
     var entry = buckets[index];
     while (entry != null) {
       if (hashCode == entry.hashCode) {
-        final k = entry.keyWeakRef.target;
+        final k = entry.key;
         if (k != null && _equals(k, key)) {
           entry.value = value;
           return;
@@ -685,7 +685,7 @@ mixin _CustomWeakHashMapMixin<K extends Object, V> on WeakHashMapMixin<K, V> {
     while (entry != null) {
       final next = entry.next;
       if (hashCode == entry.hashCode) {
-        final k = entry.keyWeakRef.target;
+        final k = entry.key;
         if (k != null && _equals(k, key)) {
           final value = entry.value;
           _removeEntry(entry, previous, index);
