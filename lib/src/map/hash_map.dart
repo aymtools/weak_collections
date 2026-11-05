@@ -6,6 +6,7 @@ import 'package:weak_collections/src/tools.dart';
 
 part 'base.dart';
 part 'linked_hash_map.dart';
+part 'mixed.dart';
 
 abstract class _WeakHashMapIterator<K extends Object, V, E>
     implements Iterator<E> {

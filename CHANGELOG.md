@@ -1,3 +1,11 @@
+## 1.7.0
+
+* Added `MixedRefHashSet` and `MixedRefLinkedHashSet` supporting mixed weak and strong references.
+* Added `MixedRefHashMap` and `MixedRefLinkedHashMap` supporting mixed weak and strong key
+  references.
+* Support specifying weak or strong reference mode per element/key via `add`/`put`, `addWeak`/
+  `putWeakKey`, and `addStrong`/`putStrongKey`.
+
 ## 1.6.1
 
 * Fix: WeakHashMap.custom remove did not return the removed value
